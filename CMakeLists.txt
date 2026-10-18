@@ -1336,7 +1336,8 @@ endif ()
 install(FILES ${CMAKE_SOURCE_DIR}/LICENSE.txt DESTINATION ".")
 configure_file(${LIBDIR}/dev-utils/platform/unix/fhs.hpp.in ${LIBDIR_BIN}/dev-utils/platform/unix/fhs.hpp)
 
-set (CPACK_PACKAGE_NAME "OrcaSlicer")
+# BukvaSlicer: своя папка установки и запись в реестре, установленный OrcaSlicer не трогается
+set (CPACK_PACKAGE_NAME "BukvaSlicer")
 set (CPACK_PACKAGE_VENDOR "SoftFever")
 set (CPACK_PACKAGE_VERSION_MAJOR "${ORCA_VERSION_MAJOR}")
 set (CPACK_PACKAGE_VERSION_MINOR "${ORCA_VERSION_MINOR}")
@@ -1361,14 +1362,14 @@ set (CPACK_NSIS_MUI_UNIICON "${CPACK_PACKAGE_ICON}")
 # Relative to the install dir: CPack's NSIS template prefixes $INSTDIR itself.
 set (CPACK_NSIS_INSTALLED_ICON_NAME "orca-slicer.exe")
 set (CPACK_PACKAGE_CHECKSUM SHA256)
-set (CPACK_PACKAGE_INSTALL_REGISTRY_KEY "OrcaSlicer")
+set (CPACK_PACKAGE_INSTALL_REGISTRY_KEY "BukvaSlicer")
 set (CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
 set (CPACK_NSIS_EXECUTABLES_DIRECTORY ".")
 # set (CPACK_NSIS_MODIFY_PATH "ON")
-set(CPACK_PACKAGE_EXECUTABLES "orca-slicer;OrcaSlicer")
+set(CPACK_PACKAGE_EXECUTABLES "orca-slicer;BukvaSlicer")
 set(CPACK_CREATE_DESKTOP_LINKS "orca-slicer")
 set (CPACK_RESOURCE_FILE_LICENSE ${CMAKE_SOURCE_DIR}/LICENSE.txt) # must also include in install command
 
-set(CPACK_WIX_UPGRADE_GUID "058245e8-20e0-4a95-9ab7-1acfe17ad511")
+set(CPACK_WIX_UPGRADE_GUID "6f1c2b7e-4b2a-4d4e-9c1e-b0c5a1d0b0a5")
 set(CPACK_GENERATOR NSIS)
 include(CPack)

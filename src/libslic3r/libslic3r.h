@@ -8,7 +8,8 @@
 #include <initializer_list>
 #include <limits>
 #include <utility>
-#define SLIC3R_APP_FULL_NAME "Orca Slicer"
+// BukvaSlicer: отображаемое имя. Внутреннее имя (папки, exe, сборка) остаётся OrcaSlicer.
+#define SLIC3R_APP_FULL_NAME "BukvaSlicer"
 #define GCODEVIEWER_APP_NAME "OrcaSlicer G-code Viewer"
 #define GCODEVIEWER_APP_KEY  "OrcaSlicerGcodeViewer"
 #define GCODEVIEWER_BUILD_ID std::string("OrcaSlicer G-code Viewer-") + std::string(SLIC3R_VERSION) + std::string("-RC")

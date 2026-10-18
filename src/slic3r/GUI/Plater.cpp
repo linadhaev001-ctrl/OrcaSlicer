@@ -14373,7 +14373,7 @@ void Plater::priv::set_project_name(const wxString& project_name)
     if (!m_project_name.IsEmpty())
         wxGetApp().mainframe->update_title_colour_after_set_title();
 #else
-    wxGetApp().mainframe->SetTitle(m_project_name + " - OrcaSlicer");
+    wxGetApp().mainframe->SetTitle(m_project_name + " - " SLIC3R_APP_FULL_NAME);
     wxGetApp().mainframe->topbar()->SetTitle(m_project_name);
 #endif
 }

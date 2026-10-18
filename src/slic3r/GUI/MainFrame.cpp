@@ -148,6 +148,7 @@
 #include "slic3r/GUI/Widgets/SideButton.hpp"
 #include "slic3r/plugin/host/PluginPages.hpp"
 #include "slic3r/Utils/NetworkAgent.hpp"
+#include "SignGeneratorDialog.hpp"
 #include <wx/defs.h>
 #include <cassert>
 #include <wx/display.h>
@@ -3572,6 +3573,11 @@ void MainFrame::init_menubar_as_editor()
         }, this);
 
     top_menu->AppendSeparator();
+    // BukvaSlicer: генератор объёмных букв
+    append_menu_item(
+        top_menu, wxID_ANY, wxString::FromUTF8("Генератор вывесок") + "\t", "",
+        [this](wxCommandEvent &) { SignGeneratorDialog::open(this); },
+        "", nullptr, []() { return true; }, this);
     append_menu_item(
         top_menu, wxID_ANY, _L("Plugins") + "\t", "",
         [](wxCommandEvent &) {
@@ -3676,6 +3682,10 @@ void MainFrame::init_menubar_as_editor()
         }, this);
 
     fileMenu->AppendSeparator();
+    // BukvaSlicer: генератор объёмных букв
+    append_menu_item(
+        fileMenu, wxID_ANY, wxString::FromUTF8("Генератор вывесок"), "", [this](wxCommandEvent&) { SignGeneratorDialog::open(this); }, "", nullptr,
+        []() { return true; }, this);
     append_menu_item(
         fileMenu, wxID_ANY, _L("Plugins"), "", [](wxCommandEvent&) { wxGetApp().open_plugins_dialog(); }, "", nullptr,
         []() { return true; }, this);

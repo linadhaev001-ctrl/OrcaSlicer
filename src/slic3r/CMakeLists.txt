@@ -124,6 +124,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/PluginPickerDialog.cpp
     GUI/PluginPickerDialog.hpp
     GUI/PluginsDialog.cpp
+    GUI/SignGeneratorDialog.cpp
+    GUI/SignGeneratorDialog.hpp
     GUI/PluginsDialog.hpp
     GUI/Shortcuts.cpp
     GUI/Shortcuts.hpp

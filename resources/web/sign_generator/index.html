@@ -1,0 +1,942 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Генератор вывесок</title>
+<script>
+// тема слайсера: хост ставит data-orca-theme, страница переводит его в свой data-theme
+(function(){var r=document.documentElement;function s(){var t=r.getAttribute("data-orca-theme");if(t)r.setAttribute("data-theme",t);}s();new MutationObserver(s).observe(r,{attributes:true,attributeFilter:["data-orca-theme"]});})();
+</script>
+<style>
+/* Layout: витрина типов букв сверху, ниже инструмент — слева пульт параметров, справа 3D и чертёж профиля */
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --fg:#1b2230; --muted:#5d6878; --line:#d5dbe3;
+  --accent:#2f56d9; --accent-ink:#ffffff; --warn:#b4560a; --err:#c0262d; --ok:#1f7a4d;
+  --view:#e3e8ee; --grid:#c3cbd6; --body:#3d4451; --body2:#7a8494; --face:#fff3d6; --glow:#ffc94a;
+  --acrylic:#cfe2f3; --led:#f2a51e; --wallc:#c9d0d9;
+  --f-display:"Unbounded",system-ui,sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161d; --panel:#1a2029; --fg:#e4e8ef; --muted:#93a0b3; --line:#2c3542;
+  --accent:#7f9cff; --accent-ink:#0d1220; --warn:#f0a35c; --err:#ff7b80; --ok:#5fd29a;
+  --view:#0f131a; --grid:#283140; --body:#8b95a8; --body2:#5c6678; --face:#ffe9b8; --glow:#ffc94a;
+  --acrylic:#9bb7d0; --led:#f2a51e; --wallc:#2c3542; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161d; --panel:#1a2029; --fg:#e4e8ef; --muted:#93a0b3; --line:#2c3542;
+  --accent:#7f9cff; --accent-ink:#0d1220; --warn:#f0a35c; --err:#ff7b80; --ok:#5fd29a;
+  --view:#0f131a; --grid:#283140; --body:#8b95a8; --body2:#5c6678; --face:#ffe9b8; --glow:#ffc94a;
+  --acrylic:#9bb7d0; --led:#f2a51e; --wallc:#2c3542; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 32px}
+.wrap{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 20px}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(20px,3vw,28px);letter-spacing:-.01em;margin:0;text-wrap:balance}
+header p{margin:0;color:var(--muted);max-width:62ch}
+.sectionTitle{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px}
+.sectionTitle h2{margin:0;font-family:var(--f-display);font-weight:500;font-size:16px}
+.sectionTitle p{margin:0;color:var(--muted);font-size:13px}
+.types{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:1000px){.types{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:460px){.types{grid-template-columns:1fr}}
+.type{all:unset;box-sizing:border-box;cursor:pointer;background:var(--panel);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;min-width:0;transition:border-color .15s,transform .15s}
+.type:hover{border-color:var(--muted)}
+.type:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.type[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.type svg{width:100%;height:auto;display:block;background:var(--bg);border-radius:6px}
+.type b{font-size:14px;font-weight:600;line-height:1.25}
+.type span.d{font-size:12.5px;color:var(--muted);line-height:1.4}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.tag{font-size:11px;font-weight:600;color:var(--accent);border:1px solid currentColor;border-radius:999px;padding:1px 8px}
+.p-body{fill:var(--body)} .p-body2{fill:var(--body2)} .p-face{fill:var(--face);stroke:var(--muted);stroke-width:.6}
+.p-acr{fill:var(--acrylic);stroke:var(--muted);stroke-width:.6} .p-led{fill:var(--led)} .p-wall{fill:var(--wallc)}
+.p-txt{fill:var(--muted);font:600 8px var(--f-mono)}
+.grid{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:18px}
+.group{display:flex;flex-direction:column;gap:10px}
+.group h2{margin:0;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.drop{border:1.5px dashed var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:border-color .15s}
+.drop:hover,.drop.over{border-color:var(--accent)}
+.drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.drop strong{font-weight:600}
+.drop small{color:var(--muted)}
+.drop input{position:absolute;width:1px;height:1px;opacity:0}
+.fname{font-family:var(--f-mono);font-size:12px;color:var(--fg);word-break:break-all}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 96px;align-items:center;gap:10px}
+.row.wide{grid-template-columns:minmax(0,1fr) 170px}
+.row label{font-size:13px}
+.row label span{display:block;font-size:11.5px;color:var(--muted)}
+.num{display:flex;align-items:center;border:1px solid var(--line);border-radius:6px;background:var(--bg);overflow:hidden}
+.num input{width:100%;min-width:0;border:0;background:transparent;color:var(--fg);font:600 13px var(--f-mono);padding:7px 4px 7px 8px;font-variant-numeric:tabular-nums;text-align:right}
+.num input:focus{outline:none}
+.num:focus-within{border-color:var(--accent)}
+.num em{font-style:normal;font-family:var(--f-mono);font-size:11px;color:var(--muted);padding-right:8px}
+select{width:100%;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:500 13px var(--f-body);padding:7px 8px}
+.check{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
+.check input{accent-color:var(--accent);width:16px;height:16px;flex:none}
+.colors{display:flex;gap:6px;justify-content:flex-end}
+input[type=color]{width:40px;height:32px;padding:2px;border:1px solid var(--line);border-radius:6px;background:var(--bg);cursor:pointer}
+.stripeInfo{font-size:12.5px;border:1px solid var(--line);border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;background:var(--bg)}
+.stripeInfo b{font-family:var(--f-mono);font-weight:600;font-variant-numeric:tabular-nums}
+.stripeInfo small{color:var(--muted)}
+.msgs{display:flex;flex-direction:column;gap:6px}
+.msg{font-size:12.5px;padding:7px 10px;border-radius:6px;border:1px solid currentColor;background:transparent}
+.msg.err{color:var(--err)} .msg.warn{color:var(--warn)} .msg.ok{color:var(--ok)}
+.btns{display:flex;flex-direction:column;gap:8px}
+button{font:600 13.5px var(--f-body);border-radius:8px;padding:10px 14px;cursor:pointer;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.stage{display:flex;flex-direction:column;gap:16px;min-width:0}
+.viewer{position:relative;background:var(--view);border:1px solid var(--line);border-radius:10px;overflow:hidden;height:min(66vh,620px);min-height:340px}
+.viewer canvas{display:block;width:100%;height:100%;touch-action:none}
+.hud{position:absolute;left:12px;top:12px;right:12px;display:flex;flex-wrap:wrap;gap:6px;pointer-events:none}
+.chip{pointer-events:auto;font:600 11.5px var(--f-mono);background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-variant-numeric:tabular-nums}
+.toggles{position:absolute;right:12px;bottom:12px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.toggles button{padding:6px 10px;font-size:12px;background:var(--panel)}
+.toggles button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.lower{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px}
+@media (max-width:860px){.lower{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.card h3{margin:0 0 10px;font-family:var(--f-display);font-weight:500;font-size:14px}
+.profile{overflow-x:auto}
+.profile svg{width:100%;min-width:420px;height:auto;display:block}
+.profile text{font-family:var(--f-mono);font-size:11px;fill:var(--fg)}
+.profile .dim{stroke:var(--muted);stroke-width:1}
+.profile .lbl{fill:var(--muted)}
+dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px}
+dt{color:var(--muted)} dd{margin:0;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.tips{margin:12px 0 0;padding-left:18px;color:var(--muted);font-size:12.5px;display:flex;flex-direction:column;gap:4px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Генератор объёмных букв</h1>
+    <p>Выберите тип буквы и загрузите SVG — детали лягут на стол с уже назначенными пластиками.</p>
+  </header>
+
+  <section class="group" aria-labelledby="typesTitle">
+    <div class="sectionTitle"><h2 id="typesTitle">Тип буквы</h2><p>Нажмите на карточку — параметры встанут под этот тип, дальше их можно подправить.</p></div>
+    <div class="types" id="types"></div>
+  </section>
+
+  <div class="grid">
+    <aside class="panel">
+      <div class="group">
+        <h2>Макет</h2>
+        <label class="drop" id="drop">
+          <strong>Выбрать SVG или перетащить сюда</strong>
+          <small>Берутся залитые контуры. Текст переведите в кривые.</small>
+          <span class="fname" id="fname">Пример: «ОК»</span>
+          <input type="file" id="file" accept=".svg,image/svg+xml">
+        </label>
+        <div class="row"><label for="width">Ширина вывески<span>по габариту, высота по пропорции</span></label>
+          <div class="num"><input id="width" type="number" step="1" min="10" value="200"><em>мм</em></div></div>
+      </div>
+
+      <div class="group">
+        <h2>Конструкция</h2>
+        <select id="construct" aria-label="Конструкция">
+          <option value="shell">Оболочка (борт + лицо) и поддон</option>
+          <option value="classic">Корпус и лицо в ступеньку</option>
+          <option value="capped">Корпус и выступающее лицо с бортом</option>
+        </select>
+        <div class="row"><label for="wall">Толщина борта</label>
+          <div class="num"><input id="wall" type="number" step="0.1" min="0.4" value="1.6"><em>мм</em></div></div>
+        <div class="row"><label for="hWall">Высота борта</label>
+          <div class="num"><input id="hWall" type="number" step="1" min="2" value="40"><em>мм</em></div></div>
+        <div class="row"><label for="tBack"><i data-modes="classic capped" style="font-style:normal">Толщина задника</i><i data-modes="shell" style="font-style:normal">Толщина поддона</i><span>0 — без задника, открытая буква</span></label>
+          <div class="num"><input id="tBack" type="number" step="0.1" min="0" value="2"><em>мм</em></div></div>
+        <div class="row" data-modes="shell"><label for="lipH">Бортик поддона<span>входит внутрь оболочки</span></label>
+          <div class="num"><input id="lipH" type="number" step="0.5" min="0" value="8"><em>мм</em></div></div>
+        <div class="row" data-modes="shell"><label for="lipW">Толщина бортика</label>
+          <div class="num"><input id="lipW" type="number" step="0.1" min="0.4" value="1.6"><em>мм</em></div></div>
+        <div class="row"><label for="gap">Зазор посадки<span>на сторону</span></label>
+          <div class="num"><input id="gap" type="number" step="0.05" min="0" value="0.15"><em>мм</em></div></div>
+        <div class="row"><label for="corner">Углы контура</label>
+          <select id="corner"><option value="miter">Острые</option><option value="round">Скруглённые</option></select></div>
+      </div>
+
+      <div class="group" data-modes="classic capped">
+        <h2>Ступенька под лицо</h2>
+        <div class="row"><label for="stepW">Ширина ступеньки<span>сколько борта срезано внутрь</span></label>
+          <div class="num"><input id="stepW" type="number" step="0.1" min="0" value="0.8"><em>мм</em></div></div>
+        <div class="row"><label for="stepH">Глубина ступеньки</label>
+          <div class="num"><input id="stepH" type="number" step="0.1" min="0" value="2"><em>мм</em></div></div>
+      </div>
+
+      <div class="group">
+        <h2>Лицо</h2>
+        <label class="check"><input type="checkbox" id="faceLit" checked> Лицо светится (полупрозрачный пластик)</label>
+        <div class="row"><label for="tFace">Толщина лица</label>
+          <div class="num"><input id="tFace" type="number" step="0.1" min="0.4" value="2"><em>мм</em></div></div>
+        <div class="row" data-modes="capped"><label for="hFace">Высота борта лица<span>на сколько выступает над корпусом</span></label>
+          <div class="num"><input id="hFace" type="number" step="0.5" min="0.5" value="10"><em>мм</em></div></div>
+        <div class="row" data-modes="capped"><label for="wFace">Толщина борта лица</label>
+          <div class="num"><input id="wFace" type="number" step="0.1" min="0.4" value="1.6"><em>мм</em></div></div>
+        <label class="check" data-modes="classic"><input type="checkbox" id="mirrorFace" checked> Зеркалить лицо для печати лицевой стороной на стол</label>
+        <label class="check" data-modes="classic"><input type="checkbox" id="exportFace" checked> Печатать лицо (снимите для акрила)</label>
+      </div>
+
+      <div class="group">
+        <h2>Сетка на лице</h2>
+        <label class="check"><input type="checkbox" id="gridOn"> Сетка на лице</label>
+        <div class="row wide" data-grid><label for="gType">Вид</label>
+          <select id="gType"><option value="through">Сквозная</option><option value="inlay">Цветная вставка</option></select></div>
+        <div class="row wide" data-grid><label for="gPattern">Рисунок</label>
+          <select id="gPattern"><option value="hex">Соты</option><option value="square">Квадраты</option><option value="diamond">Ромбы</option></select></div>
+        <div class="row" data-grid><label for="gPitch">Шаг ячейки</label>
+          <div class="num"><input id="gPitch" type="number" step="0.5" min="2" value="8"><em>мм</em></div></div>
+        <div class="row" data-grid><label for="gRib">Ширина ребра</label>
+          <div class="num"><input id="gRib" type="number" step="0.1" min="0.4" value="1.2"><em>мм</em></div></div>
+        <div class="row" data-grid><label for="gMargin">Сплошная рамка<span>от борта внутрь</span></label>
+          <div class="num"><input id="gMargin" type="number" step="0.5" min="0" value="2"><em>мм</em></div></div>
+        <div class="row" data-grid data-inlay><label for="gDepth">Глубина вставки<span>слои у лицевой стороны</span></label>
+          <div class="num"><input id="gDepth" type="number" step="0.2" min="0.2" value="0.6"><em>мм</em></div></div>
+      </div>
+
+      <div class="group">
+        <h2>Цветная полоса на борту</h2>
+        <label class="check"><input type="checkbox" id="stripeOn"> Полоса другим пластиком</label>
+        <div class="row" data-stripe><label for="stripeH">Ширина полосы</label>
+          <div class="num"><input id="stripeH" type="number" step="0.5" min="0.2" value="10"><em>мм</em></div></div>
+        <div class="row" data-stripe><label for="stripeFrom">Низ полосы<span>от низа борта; пусто — по центру</span></label>
+          <div class="num"><input id="stripeFrom" type="number" step="0.5" min="0" placeholder="центр"><em>мм</em></div></div>
+        <div class="row" data-stripe><label for="layerH">Высота слоя<span>как в слайсере</span></label>
+          <div class="num"><input id="layerH" type="number" step="0.04" min="0.04" value="0.2"><em>мм</em></div></div>
+        <div class="stripeInfo" id="stripeInfo" data-stripe></div>
+      </div>
+
+      <div class="group">
+        <h2>Превью и экспорт</h2>
+        <div class="row"><label>Цвета в превью<span>корпус, полоса, сетка</span></label>
+          <div class="colors"><input type="color" id="bodyColor" value="#2b2f36" aria-label="Цвет корпуса"><input type="color" id="stripeColor" value="#e2231a" aria-label="Цвет полосы"><input type="color" id="gColor" value="#1c1f24" aria-label="Цвет сетки"></div></div>
+        <label class="check" data-modes="classic capped"><input type="checkbox" id="sepBack"> Задник отдельной деталью</label>
+        <div class="row wide"><label for="quality">Гладкость кривых</label>
+          <select id="quality"><option value="12">Черновая</option><option value="24" selected>Обычная</option><option value="48">Высокая</option></select></div>
+      </div>
+
+      <div class="msgs" id="msgs"></div>
+
+      <div class="btns">
+        <button class="primary" id="btnSlicer" disabled hidden>Положить на стол слайсера</button>
+        <button id="btnZip" disabled>Скачать STL + 3MF (ZIP)</button>
+        <button id="btnEach" hidden>Скачать STL по одному</button>
+        <button id="btn3mf" hidden>Проект OrcaSlicer .3mf</button>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="viewer" id="viewer">
+        <div class="hud" id="hud"><span class="chip">Загрузка 3D…</span></div>
+        <div class="toggles">
+          <button id="tgExplode" aria-pressed="true">Разнести детали</button>
+          <button id="tgFace" aria-pressed="true">Показать верхнюю деталь</button>
+        </div>
+      </div>
+
+      <div class="lower">
+        <div class="card profile">
+          <h3>Профиль борта</h3>
+          <svg viewBox="0 0 460 250" role="img" aria-label="Схема сечения: оболочка и поддон" id="profShell">
+            <rect x="40" y="30" width="300" height="16" fill="var(--face)" stroke="var(--muted)" stroke-width="1" id="shCap"/>
+            <rect x="40" y="46" width="24" height="174" fill="var(--body)"/>
+            <rect x="68" y="208" width="272" height="12" fill="var(--body2)"/>
+            <rect x="68" y="168" width="14" height="40" fill="var(--body2)"/>
+            <line class="dim" x1="22" y1="46" x2="22" y2="220"/><line class="dim" x1="18" y1="46" x2="26" y2="46"/><line class="dim" x1="18" y1="220" x2="26" y2="220"/>
+            <text x="14" y="133" transform="rotate(-90 14 133)" text-anchor="middle" id="sH">борт 40</text>
+            <text x="352" y="42" id="sCap">лицо 2</text>
+            <text x="352" y="218" id="sTray">поддон 2</text>
+            <text x="90" y="186" class="lbl" id="sLip">бортик 1.6 × 8</text>
+            <line class="dim" x1="40" y1="236" x2="64" y2="236"/><line class="dim" x1="40" y1="232" x2="40" y2="240"/><line class="dim" x1="64" y1="232" x2="64" y2="240"/>
+            <text x="72" y="240" id="sWall">борт 1.6, зазор 0.15</text>
+            <text x="200" y="120" class="lbl" text-anchor="middle">полость под подсветку</text>
+          </svg>
+          <svg viewBox="0 0 460 250" role="img" aria-label="Схема сечения борта с лицом" id="profWall" hidden>
+            <rect x="40" y="200" width="300" height="20" fill="var(--body)" opacity=".9"/>
+            <rect x="40" y="104" width="30" height="96" fill="var(--body)" opacity=".9"/>
+            <rect x="40" y="80" width="16" height="24" fill="var(--body)" opacity=".9"/>
+            <path d="M59 104V80H40V30H340V44H70V104Z" fill="var(--face)" stroke="var(--muted)" stroke-width="1"/>
+            <line class="dim" x1="22" y1="80" x2="22" y2="200"/><line class="dim" x1="18" y1="80" x2="26" y2="80"/><line class="dim" x1="18" y1="200" x2="26" y2="200"/>
+            <text x="14" y="140" transform="rotate(-90 14 140)" text-anchor="middle" id="wH">борт 40</text>
+            <line class="dim" x1="22" y1="30" x2="22" y2="80"/><line class="dim" x1="18" y1="30" x2="26" y2="30"/>
+            <text x="14" y="55" transform="rotate(-90 14 55)" text-anchor="middle" id="wHF">10</text>
+            <line class="dim" x1="40" y1="232" x2="70" y2="232"/><line class="dim" x1="40" y1="228" x2="40" y2="236"/><line class="dim" x1="70" y1="228" x2="70" y2="236"/>
+            <text x="78" y="236" id="wWall">борт корпуса 1.6</text>
+            <text x="352" y="214" id="wBack">задник 2</text>
+            <text x="352" y="41" id="wCap">крышка 2</text>
+            <text x="80" y="66" id="wFW" class="lbl">борт лица 1.6 × 10</text>
+            <text x="80" y="96" id="wTongue" class="lbl">язычок</text>
+            <text x="200" y="160" class="lbl" text-anchor="middle">полость под подсветку</text>
+          </svg>
+          <svg viewBox="0 0 460 250" role="img" aria-label="Схема сечения борта со ступенькой" id="profFlat" hidden>
+            <rect x="40" y="180" width="300" height="22" fill="var(--body)" opacity=".9"/>
+            <rect x="40" y="62" width="30" height="118" fill="var(--body)" opacity=".9"/>
+            <rect x="40" y="36" width="16" height="26" fill="var(--body)" opacity=".9"/>
+            <rect x="59" y="36" width="281" height="26" fill="var(--face)" stroke="var(--muted)" stroke-width="1"/>
+            <line class="dim" x1="40" y1="20" x2="56" y2="20"/><line class="dim" x1="40" y1="16" x2="40" y2="24"/><line class="dim" x1="56" y1="16" x2="56" y2="24"/>
+            <line class="dim" x1="56" y1="10" x2="70" y2="10" stroke-dasharray="2 2"/>
+            <text x="74" y="14" id="pStep">ступенька 0.8</text>
+            <line class="dim" x1="40" y1="222" x2="70" y2="222"/><line class="dim" x1="40" y1="218" x2="40" y2="226"/><line class="dim" x1="70" y1="218" x2="70" y2="226"/>
+            <text x="40" y="240" id="pWall">борт 1.6</text>
+            <line class="dim" x1="22" y1="36" x2="22" y2="180"/><line class="dim" x1="18" y1="36" x2="26" y2="36"/><line class="dim" x1="18" y1="180" x2="26" y2="180"/>
+            <text x="14" y="112" transform="rotate(-90 14 112)" text-anchor="middle" id="pH">высота 40</text>
+            <text x="352" y="195" id="pBack">задник 2</text>
+            <text x="352" y="53" id="pFace">лицо 2</text>
+            <text x="200" y="53" class="lbl" text-anchor="middle" id="pGap">зазор 0.15</text>
+            <text x="352" y="76" class="lbl" id="pStepH">глубина ступ. 2</text>
+            <text x="200" y="125" class="lbl" text-anchor="middle">полость под подсветку</text>
+          </svg>
+        </div>
+        <div class="card">
+          <h3>Итог</h3>
+          <dl id="stats"><dt>Статус</dt><dd>считаю…</dd></dl>
+          <ul class="tips">
+            <li>Детали с лицом в файле уже зеркальные и стоят лицом вниз: после переворота надпись читается правильно.</li>
+            <li>В OrcaSlicer откройте .3mf из архива: части разнесены по пластикам — 1 корпус, 2 полоса, 3 лицо, 4 сетка. Останется сопоставить их со слотами AMS.</li>
+            <li>Для светящегося лица: белый PETG 1,2–2 мм, заполнение 100%. Под модули высотой 9,5 мм борт лучше 40 мм, на 20 мм проступают точки.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="lib/three.min.js"></script>
+<script src="lib/SVGLoader.js"></script>
+<script src="lib/OrbitControls.js"></script>
+<script src="lib/clipper.js"></script>
+<script src="lib/jszip.min.js"></script>
+<script>
+(function(){
+const SAMPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">
+<path fill-rule="evenodd" d="M50 10a40 40 0 1 0 0.001 0zM50 28a22 22 0 1 1 -0.001 0z"/>
+<path d="M115 10H135V44L168 10H193L152 50L195 90H170L135 56V90H115Z"/></svg>`;
+const S = 1000; // клиппер: 1 мм = 1000 ед.
+const $ = id => document.getElementById(id);
+const P = ['width','tBack','wall','hWall','stepW','stepH','tFace','gap','hFace','wFace','lipH','lipW','stripeH','layerH','gPitch','gRib','gMargin','gDepth'];
+const mode = () => $('construct').value;
+let svgText = SAMPLE, baseName = 'vyveska', raw = null, out = null;
+let explode = true, showFace = true;
+
+/* ---------- типы букв: карточки с разрезами ---------- */
+const WALL = '<rect x="0" y="104" width="160" height="8" class="p-wall"/>';
+const glow = (id, cx, cy, rx, ry, op) => `<defs><radialGradient id="${id}"><stop offset="0" style="stop-color:var(--glow);stop-opacity:${op || .85}"/><stop offset="1" style="stop-color:var(--glow);stop-opacity:0"/></radialGradient></defs><ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#${id})"/>`;
+const leds = y => [50, 74, 98].map(x => `<rect x="${x}" y="${y}" width="12" height="4" rx="1" class="p-led"/>`).join('');
+const classicBody = (faceCls) => `<rect x="24" y="98" width="112" height="6" class="p-body"/><rect x="24" y="36" width="6" height="62" class="p-body"/><rect x="130" y="36" width="6" height="62" class="p-body"/><rect x="24" y="30" width="3" height="6" class="p-body"/><rect x="133" y="30" width="3" height="6" class="p-body"/><rect x="28" y="30" width="104" height="6" class="${faceCls}"/>`;
+const TYPES = [
+  {key:'shellLit', title:'Лицевое свечение, оболочка', desc:'Светится лицо. Борт и лицо печатаются одной деталью лицом вниз, поддон с бортиком вставляется сзади.', tags:['Основной','1 смена цвета'],
+   svg: k => glow(k,80,20,64,16) + WALL + leds(94) + '<rect x="24" y="30" width="112" height="6" class="p-face"/><rect x="24" y="36" width="6" height="68" class="p-body"/><rect x="130" y="36" width="6" height="68" class="p-body"/><rect x="31" y="98" width="98" height="6" class="p-body2"/><rect x="31" y="86" width="4" height="12" class="p-body2"/><rect x="125" y="86" width="4" height="12" class="p-body2"/>',
+   p:{construct:'shell', faceLit:true, tBack:2, hWall:40, lipH:8}},
+  {key:'classic', title:'Лицевое свечение, лицо в ступеньку', desc:'Классика: корпус с задником, лицо ложится в ступеньку борта и не выступает.', tags:['2 детали'],
+   svg: k => glow(k,80,20,64,16) + WALL + leds(94) + classicBody('p-face'),
+   p:{construct:'classic', faceLit:true, hWall:40}},
+  {key:'capped', title:'Выступающее лицо', desc:'Лицо со своим бортом выступает над корпусом и светится сверху и по краю.', tags:['Объёмный вид'],
+   svg: k => glow(k,80,14,66,14) + glow(k+'l',20,38,10,16,.6) + glow(k+'r',140,38,10,16,.6) + WALL + leds(94) + '<rect x="24" y="98" width="112" height="6" class="p-body"/><rect x="24" y="50" width="6" height="48" class="p-body"/><rect x="130" y="50" width="6" height="48" class="p-body"/><path d="M24 24h112v26h-6v-20h-100v20h-6z" class="p-face"/>',
+   p:{construct:'capped', faceLit:true, hWall:40, hFace:10}},
+  {key:'halo', title:'Контражур', desc:'Буква непрозрачная, свет уходит на стену и даёт ореол. Ставится на шпильках в 20–30 мм от стены.', tags:['Без задника','Мало пластика'],
+   svg: k => glow(k,80,92,80,16,.95) + WALL + '<rect x="47" y="76" width="3" height="28" class="p-body2"/><rect x="110" y="76" width="3" height="28" class="p-body2"/><rect x="24" y="20" width="112" height="6" class="p-body"/><rect x="24" y="26" width="6" height="50" class="p-body"/><rect x="130" y="26" width="6" height="50" class="p-body"/>' + [50,74,98].map(x => `<rect x="${x}" y="26" width="12" height="4" rx="1" class="p-led"/>`).join(''),
+   p:{construct:'shell', faceLit:false, tBack:0, hWall:30}},
+  {key:'combo', title:'Лицо и контражур', desc:'Светится лицо и ореол на стене. Оболочка с белым лицом, сзади открыто.', tags:['Премиум'],
+   svg: k => glow(k,80,92,80,16,.95) + glow(k+'t',80,10,64,12) + WALL + '<rect x="47" y="76" width="3" height="28" class="p-body2"/><rect x="110" y="76" width="3" height="28" class="p-body2"/><rect x="24" y="20" width="112" height="6" class="p-face"/><rect x="24" y="26" width="6" height="50" class="p-body"/><rect x="130" y="26" width="6" height="50" class="p-body"/>' + [50,74,98].map(x => `<rect x="${x}" y="60" width="12" height="4" rx="1" class="p-led"/>`).join(''),
+   p:{construct:'shell', faceLit:true, tBack:0, hWall:40}},
+  {key:'side', title:'Торцевое свечение', desc:'Лицо непрозрачное, горит полоса по борту из полупрозрачного пластика.', tags:['Полоса на AMS'],
+   svg: k => glow(k+'l',18,64,12,12,.9) + glow(k+'r',142,64,12,12,.9) + WALL + leds(94) + classicBody('p-body') + '<rect x="24" y="58" width="6" height="12" class="p-face"/><rect x="130" y="58" width="6" height="12" class="p-face"/>',
+   p:{construct:'classic', faceLit:false, hWall:40, stripeOn:true, stripeH:10, stripeColor:'#ffe7a8'}},
+  {key:'acrylic', title:'Борт под акрил', desc:'Корпус со ступенькой под акрил 3 мм. Лицо не печатается — заказчик вклеивает своё.', tags:['Для РПК'],
+   svg: k => glow(k,80,20,64,14,.6) + WALL + classicBody('p-acr') + '<text x="80" y="50" text-anchor="middle" class="p-txt">акрил</text>',
+   p:{construct:'classic', faceLit:true, stepW:1.2, stepH:3, tFace:3, gap:0.3, exportFace:false}},
+  {key:'deco', title:'Декоративное лицо', desc:'Сетка или соты на лице цветной вставкой. Для кафе, барбершопов, клубов.', tags:['AMS','Премиум'],
+   svg: k => glow(k,80,14,66,14,.7) + WALL + leds(94) + '<rect x="24" y="98" width="112" height="6" class="p-body"/><rect x="24" y="50" width="6" height="48" class="p-body"/><rect x="130" y="50" width="6" height="48" class="p-body"/><path d="M24 24h112v26h-6v-20h-100v20h-6z" class="p-face"/>' + Array.from({length: 9}, (_, i) => `<rect x="${36 + i * 11}" y="24" width="3" height="6" class="p-body"/>`).join(''),
+   p:{construct:'capped', faceLit:true, hWall:40, gridOn:true, gType:'inlay', gPattern:'hex'}},
+];
+const BASE = {construct:'shell', faceLit:true, exportFace:true, mirrorFace:true, tBack:2, wall:1.6, hWall:40, stepW:0.8, stepH:2, tFace:2, gap:0.15,
+  hFace:10, wFace:1.6, lipH:8, lipW:1.6, gridOn:false, gType:'through', gPattern:'hex', stripeOn:false, stripeH:10, stripeFrom:'', stripeColor:'#e2231a', bodyColor:'#2b2f36'};
+let currentType = 'shellLit';
+function renderTypes(){
+  const box = $('types'); box.innerHTML = '';
+  for (const t of TYPES){
+    const b = document.createElement('button');
+    b.className = 'type'; b.type = 'button'; b.setAttribute('aria-pressed', t.key === currentType);
+    b.innerHTML = `<svg viewBox="0 0 160 112" aria-hidden="true">${t.svg('gl-' + t.key)}</svg><b></b><span class="d"></span><div class="tags"></div>`;
+    b.querySelector('b').textContent = t.title;
+    b.querySelector('.d').textContent = t.desc;
+    for (const tg of t.tags){ const s = document.createElement('span'); s.className = 'tag'; s.textContent = tg; b.querySelector('.tags').appendChild(s); }
+    b.addEventListener('click', () => applyType(t.key));
+    box.appendChild(b);
+  }
+}
+function applyType(key){
+  const t = TYPES.find(x => x.key === key); if (!t) return;
+  currentType = key;
+  const p = Object.assign({}, BASE, t.p);
+  for (const [k, val0] of Object.entries(p)){
+    const el = $(k); if (!el) continue;
+    if (el.type === 'checkbox') el.checked = !!val0; else el.value = val0;
+  }
+  [...$('types').children].forEach((b, i) => b.setAttribute('aria-pressed', TYPES[i].key === key));
+  needFit = true; recompute();
+}
+
+/* ---------- SVG → полигоны ---------- */
+function parseRaw(text, div){
+  const data = new THREE.SVGLoader().parse(text);
+  const items = [];
+  const any = data.paths.some(p => (p.userData && p.userData.style && p.userData.style.fill) !== 'none');
+  for (const p of data.paths){
+    const st = (p.userData && p.userData.style) || {};
+    if (any && st.fill === 'none') continue;
+    const polys = p.subPaths.map(sp => sp.getPoints(div)).filter(a => a.length > 2);
+    if (polys.length) items.push({rule: st.fillRule === 'evenodd' ? 'evenodd' : 'nonzero', polys});
+  }
+  return items;
+}
+function clip(type, subj, clp, fill){
+  const c = new ClipperLib.Clipper();
+  c.AddPaths(subj, ClipperLib.PolyType.ptSubject, true);
+  if (clp) c.AddPaths(clp, ClipperLib.PolyType.ptClip, true);
+  const sol = new ClipperLib.Paths();
+  const f = fill || ClipperLib.PolyFillType.pftNonZero;
+  c.Execute(type, sol, f, f);
+  return sol;
+}
+function offset(paths, d, join){
+  const co = new ClipperLib.ClipperOffset(2, 15);
+  co.AddPaths(paths, join === 'round' ? ClipperLib.JoinType.jtRound : ClipperLib.JoinType.jtMiter, ClipperLib.EndType.etClosedPolygon);
+  const sol = new ClipperLib.Paths();
+  co.Execute(sol, d * S);
+  return sol;
+}
+function treeEx(type, a, b){
+  const c = new ClipperLib.Clipper();
+  c.AddPaths(a, ClipperLib.PolyType.ptSubject, true);
+  if (b) c.AddPaths(b, ClipperLib.PolyType.ptClip, true);
+  const tree = new ClipperLib.PolyTree();
+  c.Execute(type, tree, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+  return ClipperLib.JS.PolyTreeToExPolygons(tree);
+}
+const toEx = paths => treeEx(ClipperLib.ClipType.ctUnion, paths);
+const diffEx = (a, b) => treeEx(ClipperLib.ClipType.ctDifference, a, b);
+function outline(items, widthMm){
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const it of items) for (const pl of it.polys) for (const q of pl){
+    if (q.x < minX) minX = q.x; if (q.x > maxX) maxX = q.x; if (q.y < minY) minY = q.y; if (q.y > maxY) maxY = q.y; }
+  const k = widthMm / Math.max(maxX - minX, 1e-9);
+  let all = [];
+  for (const it of items){
+    const ps = it.polys.map(pl => pl.map(q => ({X: Math.round((q.x - minX) * k * S), Y: Math.round((maxY - q.y) * k * S)})));
+    const fill = it.rule === 'evenodd' ? ClipperLib.PolyFillType.pftEvenOdd : ClipperLib.PolyFillType.pftNonZero;
+    all = all.concat(clip(ClipperLib.ClipType.ctUnion, ps, null, fill));
+  }
+  return {A: clip(ClipperLib.ClipType.ctUnion, all), w: widthMm, h: (maxY - minY) * k};
+}
+
+/* ---------- полигоны → геометрия ---------- */
+function extrude(ex, z0, h){
+  if (!ex.length || h <= 1e-6) return null;
+  const shapes = ex.map(e => {
+    const s = new THREE.Shape(e.outer.map(p => new THREE.Vector2(p.X / S, p.Y / S)));
+    s.holes = e.holes.map(hh => new THREE.Path(hh.map(p => new THREE.Vector2(p.X / S, p.Y / S))));
+    return s;
+  });
+  const g = new THREE.ExtrudeGeometry(shapes, {depth: h, bevelEnabled: false, curveSegments: 1});
+  g.translate(0, 0, z0);
+  return g;
+}
+function val(id){ const x = parseFloat($(id).value); return isFinite(x) ? x : 0; }
+// режет слои по высоте полосы: низ и верх — своей ролью, середина — полоса
+function splitZ(list, stripe){
+  const parts = [], c1 = stripe ? stripe.z1 : Infinity, c2 = stripe ? stripe.z2 : Infinity;
+  for (const it of list){
+    for (const [a, b, mid] of [[it.a, Math.min(it.b, c1), false], [Math.max(it.a, c1), Math.min(it.b, c2), true], [Math.max(it.a, c2), it.b, false]]){
+      if (b - a < 1e-6) continue;
+      const g = extrude(it.ex, a, b - a);
+      if (g) parts.push({g, role: mid && it.role !== 'face' ? 'stripe' : it.role});
+    }
+  }
+  return parts;
+}
+
+/* ---------- сетка на лице ---------- */
+function makeGrid(I, msgs){
+  const pat = $('gPattern').value, s = val('gPitch'), rib = val('gRib');
+  if (rib < 0.4 || s < rib + 1){ msgs.push({t:'err', m:'Сетка: шаг должен быть больше ширины ребра хотя бы на 1 мм, ребро — не тоньше 0.4 мм.'}); return null; }
+  if (!I.length){ msgs.push({t:'warn', m:'Сетка не поместилась: лицо слишком узкое для такой рамки.'}); return null; }
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const pth of I) for (const q of pth){ x0 = Math.min(x0, q.X); x1 = Math.max(x1, q.X); y0 = Math.min(y0, q.Y); y1 = Math.max(y1, q.Y); }
+  const cx = (x0 + x1) / 2 / S, cy = (y0 + y1) / 2 / S, R = Math.hypot(x1 - x0, y1 - y0) / 2 / S + s;
+  const est = pat === 'hex' ? (2 * R / s) * (2 * R / (s * 0.866)) : (2 * R / s) ** 2;
+  if (est > 40000){ msgs.push({t:'warn', m:'Сетка слишком мелкая для такого размера — увеличьте шаг.'}); return null; }
+  const cells = [], put = pts => cells.push(pts.map(([x, y]) => ({X: Math.round(x * S), Y: Math.round(y * S)})));
+  if (pat === 'hex'){
+    const f = s - rib, r = f / Math.sqrt(3), dy = s * Math.sqrt(3) / 2;
+    const nj = Math.ceil(R / dy) + 1, ni = Math.ceil(R / s) + 1;
+    for (let j = -nj; j <= nj; j++) for (let i = -ni; i <= ni; i++){
+      const x = cx + i * s + (j & 1 ? s / 2 : 0), y = cy + j * dy;
+      put([0, 1, 2, 3, 4, 5].map(k => { const a = Math.PI / 2 + k * Math.PI / 3; return [x + r * Math.cos(a), y + r * Math.sin(a)]; }));
+    }
+  } else {
+    const rot = pat === 'diamond' ? Math.PI / 4 : 0, hh = (s - rib) / 2, c = Math.cos(rot), sn = Math.sin(rot), n = Math.ceil(R / s) + 1;
+    for (let j = -n; j <= n; j++) for (let i = -n; i <= n; i++){
+      const u = i * s, w = j * s;
+      put([[-hh, -hh], [hh, -hh], [hh, hh], [-hh, hh]].map(([a, b]) => { const X = u + a, Y = w + b; return [cx + X * c - Y * sn, cy + X * sn + Y * c]; }));
+    }
+  }
+  const full = Math.abs(ClipperLib.Clipper.Area(cells[0]));
+  // обрезки ячеек у края меньше 35% убираем — иначе у рамки получаются тонкие огрызки
+  const keep = treeEx(ClipperLib.ClipType.ctIntersection, cells, I).filter(e => Math.abs(ClipperLib.Clipper.Area(e.outer)) >= full * 0.35);
+  if (!keep.length){ msgs.push({t:'warn', m:'Ни одна ячейка сетки не поместилась — уменьшите шаг или рамку.'}); return null; }
+  const res = [];
+  for (const e of keep){ res.push(e.outer); for (const hl of e.holes) res.push(hl); }
+  return {cells: res, count: keep.length};
+}
+// крышка лица: сплошная, сквозная сетка или цветная вставка; z от 0 (лицевая сторона на столе)
+function capParts(C, I, tFace, M, role, msgs){
+  const parts = []; let cells = 0;
+  const g = $('gridOn').checked ? makeGrid(I, msgs) : null;
+  if (!g){ parts.push({g: extrude(M(toEx(C)), 0, tFace), role}); return {parts, cells}; }
+  cells = g.count;
+  if ($('gType').value === 'through'){
+    parts.push({g: extrude(M(diffEx(C, g.cells)), 0, tFace), role});
+  } else {
+    const d = Math.min(val('gDepth'), tFace - 0.2);
+    if (d < 0.2){ msgs.push({t:'err', m:'Лицо слишком тонкое для цветной вставки: нужно хотя бы 0.4 мм.'}); return null; }
+    const ribs = clip(ClipperLib.ClipType.ctDifference, I, g.cells);
+    parts.push({g: extrude(M(diffEx(C, ribs)), 0, d), role}, {g: extrude(M(toEx(C)), d, tFace - d), role}, {g: extrude(M(toEx(ribs)), 0, d), role: 'inlay'});
+  }
+  return {parts, cells};
+}
+
+function build(){
+  const v = Object.fromEntries(P.map(k => [k, val(k)]));
+  const md = mode(), join = $('corner').value, msgs = [];
+  const fail = m => { msgs.push({t:'err', m}); show(msgs); return null; };
+  if (!raw || !raw.length) return fail('В файле не найдено ни одного замкнутого залитого контура.');
+  if (v.width < 10) return fail('Ширина вывески должна быть не меньше 10 мм.');
+  if (v.wall < 0.4) return fail('Борт тоньше 0.4 мм не напечатается.');
+
+  const {A, w, h} = outline(raw, v.width);
+  const exA = toEx(A);
+  const in1 = offset(A, -v.wall, join);
+  const ring = diffEx(A, in1);
+  const faceLit = $('faceLit').checked, capRole = faceLit ? 'face' : 'body';
+  // детали с лицом печатаются лицевой стороной на стол → в файле они зеркальные
+  const mirror = md !== 'classic' || $('mirrorFace').checked;
+  const W = Math.round(w * S);
+  const M = ex => !mirror ? ex : ex.map(e => ({outer: e.outer.map(p => ({X: W - p.X, Y: p.Y})), holes: e.holes.map(hh => hh.map(p => ({X: W - p.X, Y: p.Y})))}));
+  const bodyList = [], faceList = [];
+  let faceDirect = [], capC, capI, zAll, zTop = 0, zLedge = 0, hasStep = false, tongueH = 0, faceH = v.tFace, exportFace = true;
+
+  if (md === 'shell'){
+    // оболочка печатается лицом вниз: лицо 0..tFace, борт выше
+    if (v.hWall < 2) return fail('Борт оболочки слишком низкий.');
+    capC = A; capI = offset(A, -(v.wall + v.gMargin), join);
+    faceList.push({ex: M(ring), a: v.tFace, b: v.tFace + v.hWall, role: 'body'});
+    if (v.tBack > 0){
+      const Pp = offset(A, -(v.wall + v.gap), join);
+      if (!Pp.length) return fail('Поддон не помещается внутрь: контур слишком узкий для такого борта и зазора.');
+      if (v.lipH > 0 && v.lipW < 0.4) return fail('Бортик поддона тоньше 0.4 мм не напечатается.');
+      if (v.tBack + v.lipH >= v.hWall) return fail('Поддон с бортиком выше борта оболочки — уменьшите бортик.');
+      bodyList.push({ex: toEx(Pp), a: 0, b: v.tBack, role: 'body'});
+      if (v.lipH > 0) bodyList.push({ex: diffEx(Pp, offset(Pp, -v.lipW, join)), a: v.tBack, b: v.tBack + v.lipH, role: 'body'});
+      if (toEx(Pp).length < exA.length) msgs.push({t:'warn', m:'В узких местах поддон пропал — там буква останется открытой сзади.'});
+    }
+    zAll = v.hWall + v.tFace; faceH = zAll;
+  } else {
+    const rimTop = v.wall - v.stepW;
+    if (v.stepW > 0 && rimTop < 0.4) return fail(`Ступенька съедает борт: над ней остаётся ${rimTop.toFixed(2)} мм. Уменьшите ступеньку или утолщите борт.`);
+    if (v.stepH >= v.hWall) return fail('Глубина ступеньки должна быть меньше высоты борта.');
+    hasStep = v.stepW > 0 && v.stepH > 0;
+    const in2 = hasStep ? offset(A, -rimTop, join) : in1;
+    zTop = v.tBack + v.hWall; zLedge = zTop - (hasStep ? v.stepH : 0);
+    if (v.tBack > 0) bodyList.push({ex: exA, a: 0, b: v.tBack, role: 'back'});
+    bodyList.push({ex: ring, a: v.tBack, b: zLedge, role: 'body'});
+    if (hasStep) bodyList.push({ex: diffEx(A, in2), a: zLedge, b: zTop, role: 'body'});
+    if (md === 'capped'){
+      if (!hasStep) return fail('Для выступающего лица нужна ступенька: язычку лица не во что входить.');
+      const tongueOut = rimTop + v.gap;
+      if (v.wall - tongueOut < 0.4) return fail(`Язычок лица выходит тоньше 0.4 мм (${(v.wall - tongueOut).toFixed(2)} мм). Увеличьте ширину ступеньки или уменьшите зазор.`);
+      if (v.wFace < tongueOut + 0.3) return fail(`Борт лица ${v.wFace} мм не доходит до язычка. Сделайте его не меньше ${(tongueOut + 0.3).toFixed(1)} мм.`);
+      if (v.hFace <= 0) return fail('Высота борта лица должна быть больше нуля.');
+      tongueH = v.stepH > 0.6 ? v.stepH - 0.2 : v.stepH;
+      const tongue = diffEx(offset(A, -tongueOut, join), in1);
+      faceDirect.push({g: extrude(M(diffEx(A, offset(A, -v.wFace, join))), v.tFace, v.hFace), role: capRole}, {g: extrude(M(tongue), v.tFace + v.hFace, tongueH), role: capRole});
+      capC = A; capI = offset(A, -(v.wFace + v.gMargin), join);
+      faceH = v.tFace + v.hFace + tongueH; zAll = zTop + v.hFace + v.tFace;
+      if (tongue.length < exA.length) msgs.push({t:'warn', m:`У части узких элементов язычок пропал (${exA.length} контуров → ${tongue.length}). Лицо там будет держаться только на клею.`});
+      if (v.wFace > v.wall + 0.01) msgs.push({t:'warn', m:'Борт лица толще борта корпуса — он будет нависать над полостью изнутри.'});
+    } else {
+      const faceP = offset(A, -(hasStep ? rimTop + v.gap : v.wall + v.gap), join);
+      const faceEx = toEx(faceP);
+      if (!faceEx.length) return fail('Лицо получилось пустым: контур слишком тонкий для такой толщины борта.');
+      capC = faceP; capI = offset(faceP, -v.gMargin, join);
+      zAll = zLedge + v.tFace;
+      exportFace = $('exportFace').checked;
+      if (faceEx.length < exA.length) msgs.push({t:'warn', m:`Часть узких элементов пропала у лица (${exA.length} контуров макета → ${faceEx.length} у лица). Утолщите линии в макете.`});
+      if (hasStep){
+        const d = v.tFace - v.stepH;
+        if (Math.abs(d) > 0.001) msgs.push({t:'warn', m: d > 0 ? `Лицо выступает над бортом на ${d.toFixed(2)} мм.` : `Лицо утоплено ниже края борта на ${(-d).toFixed(2)} мм.`});
+      } else msgs.push({t:'warn', m:'Ступенька выключена: лицу не на что опереться, оно ляжет только на клей.'});
+    }
+  }
+
+  const cap = capParts(capC, capI, v.tFace, M, capRole, msgs);
+  if (!cap || msgs.some(m => m.t === 'err')){ show(msgs); return null; }
+  if (in1.length === 0) msgs.push({t:'warn', m:'Борт заполнил контур целиком — полости внутри нет.'});
+
+  // полоса: в корпусе считаем от стола вверх, в оболочке — от края борта (она печатается лицом вниз)
+  let stripe = null;
+  if ($('stripeOn').checked){
+    const lh = Math.max(v.layerH, 0.04), sH = v.stripeH;
+    const fromRaw = $('stripeFrom').value.trim();
+    const from = fromRaw === '' ? (v.hWall - sH) / 2 : parseFloat(fromRaw);
+    const snap = z => Math.round(z / lh) * lh;
+    let z1, z2;
+    if (md === 'shell'){ const top = v.tFace + v.hWall; z1 = snap(top - from - sH); z2 = snap(top - from); }
+    else { z1 = snap(v.tBack + from); z2 = snap(v.tBack + from + sH); }
+    if (sH <= 0 || z2 <= z1) msgs.push({t:'warn', m:'Полоса тоньше одного слоя — смена цвета не нужна.'});
+    else if (from < -1e-6 || from + sH > v.hWall + 1e-6) msgs.push({t:'warn', m:`Полоса выходит за борт высотой ${v.hWall} мм.`});
+    else {
+      stripe = {z1, z2, n1: Math.round(z1 / lh) + 1, n2: Math.round(z2 / lh) + 1, from, sH: z2 - z1};
+      if (md !== 'shell' && hasStep && z2 > zLedge + 1e-6) msgs.push({t:'warn', m:'Полоса заходит на ступеньку — верх полосы будет виден только снаружи.'});
+    }
+  }
+  if (w > 256 || h > 256) msgs.push({t:'warn', m:`Габарит ${w.toFixed(0)}×${h.toFixed(0)} мм может не влезть на стол принтера — режьте на части.`});
+  if (!msgs.length) msgs.push({t:'ok', m:'Геометрия в порядке, можно скачивать.'});
+  show(msgs);
+
+  const bodyParts = splitZ(bodyList, md === 'shell' ? null : stripe);
+  const faceParts = cap.parts.concat(faceDirect, splitZ(faceList, md === 'shell' ? stripe : null)).filter(p => p.g);
+  return {v, md, w, h, zAll, zTop, zLedge, hasStep, tongueH, faceH, mirror, faceLit, exportFace, stripe, bodyParts, faceParts, cells: cap.cells, parts: exA.length};
+}
+function show(msgs){
+  $('msgs').innerHTML = '';
+  for (const m of msgs){ const d = document.createElement('div'); d.className = 'msg ' + m.t; d.textContent = m.m; $('msgs').appendChild(d); }
+}
+
+/* ---------- 3D ---------- */
+const viewer = $('viewer');
+const renderer = new THREE.WebGLRenderer({antialias: true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+viewer.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, 1, 1, 20000);
+camera.up.set(0, 0, 1);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x666677, 0.75));
+const sun = new THREE.DirectionalLight(0xffffff, 0.75); sun.position.set(-1, -2, 3); scene.add(sun);
+const matBody = new THREE.MeshStandardMaterial({roughness: 0.65, metalness: 0.05, side: THREE.DoubleSide});
+const matFace = new THREE.MeshStandardMaterial({roughness: 0.4, transparent: true, opacity: 0.9, emissiveIntensity: 0.3, side: THREE.DoubleSide});
+const matInlay = new THREE.MeshStandardMaterial({roughness: 0.5, side: THREE.DoubleSide});
+const matStripe = new THREE.MeshStandardMaterial({roughness: 0.6, metalness: 0.05, side: THREE.DoubleSide});
+const roleMat = r => r === 'face' ? matFace : r === 'stripe' ? matStripe : r === 'inlay' ? matInlay : matBody;
+const group = new THREE.Group(); scene.add(group);
+let grid = null, faceMesh = null, lastSize = 0;
+
+function tokens(){
+  const cs = getComputedStyle(document.documentElement);
+  const c = n => new THREE.Color(cs.getPropertyValue(n).trim() || '#888');
+  renderer.setClearColor(c('--view'));
+  matFace.color = c('--face'); matFace.emissive = c('--face');
+  if (grid) grid.material.color = c('--grid');
+}
+function resize(){
+  const r = viewer.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / Math.max(r.height, 1); camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(viewer);
+
+function render3d(res, refit){
+  group.clear(); faceMesh = null;
+  if (!res) return;
+  matBody.color.set($('bodyColor').value); matStripe.color.set($('stripeColor').value); matInlay.color.set($('gColor').value);
+  for (const p of res.bodyParts) group.add(new THREE.Mesh(p.g, roleMat(p.role)));
+  if (res.faceParts.length){
+    faceMesh = new THREE.Group();
+    for (const p of res.faceParts) faceMesh.add(new THREE.Mesh(p.g, roleMat(p.role)));
+    const v = res.v;
+    const lift = !explode ? 0 : res.md === 'shell' ? (res.bodyParts.length ? v.hWall * 0.8 + 10 : 0) : Math.max(15, v.hWall * 0.6) + (res.md === 'capped' ? res.tongueH : 0);
+    // зеркальные детали в превью переворачиваем обратно (поворот на 180° вокруг Y)
+    if (res.mirror){ faceMesh.rotation.y = Math.PI; faceMesh.position.x = res.w; faceMesh.position.z = (res.md === 'classic' ? res.zLedge + v.tFace : res.zAll) + lift; }
+    else faceMesh.position.z = res.zLedge + lift;
+    faceMesh.visible = showFace;
+    group.add(faceMesh);
+  }
+  group.position.set(-res.w / 2, -res.h / 2, 0);
+  const size = Math.max(res.w, res.h);
+  if (refit || Math.abs(size - lastSize) > 1){
+    lastSize = size;
+    if (grid){ scene.remove(grid); grid.geometry.dispose(); }
+    const step = size > 400 ? 50 : size > 120 ? 10 : 5;
+    const ext = Math.ceil(size * 1.4 / step) * step;
+    grid = new THREE.GridHelper(ext, ext / step);
+    grid.rotation.x = Math.PI / 2; grid.position.z = -0.05; scene.add(grid);
+    tokens();
+    const d = size * 1.6 + res.zAll * 2;
+    camera.position.set(-d * 0.35, -d * 0.9, d * 0.75);
+    controls.target.set(0, 0, res.zAll / 2); controls.update();
+  }
+}
+(function loop(){ controls.update(); renderer.render(scene, camera); requestAnimationFrame(loop); })();
+new MutationObserver(tokens).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', tokens);
+
+/* ---------- вывод чисел ---------- */
+function updateInfo(res){
+  const v = Object.fromEntries(P.map(k => [k, val(k)]));
+  const f = n => (+n.toFixed(2)).toString();
+  const md = mode();
+  document.querySelectorAll('[data-modes]').forEach(el => el.hidden = !el.dataset.modes.split(' ').includes(md));
+  $('profShell').hidden = md !== 'shell'; $('profWall').hidden = md !== 'capped'; $('profFlat').hidden = md !== 'classic';
+  const gOn = $('gridOn').checked, gIn = $('gType').value === 'inlay';
+  document.querySelectorAll('[data-grid]').forEach(el => el.hidden = !gOn || (el.hasAttribute('data-inlay') && !gIn));
+  const sOn = $('stripeOn').checked;
+  document.querySelectorAll('[data-stripe]').forEach(el => el.hidden = !sOn);
+  $('tgFace').textContent = md === 'shell' ? 'Показать оболочку' : 'Показать лицо';
+
+  $('sH').textContent = 'борт ' + f(v.hWall);
+  $('sCap').textContent = 'лицо ' + f(v.tFace);
+  $('shCap').setAttribute('fill', $('faceLit').checked ? 'var(--face)' : 'var(--body)');
+  $('sTray').textContent = v.tBack > 0 ? 'поддон ' + f(v.tBack) : 'без поддона';
+  $('sLip').textContent = v.tBack > 0 ? 'бортик ' + f(v.lipW) + ' × ' + f(v.lipH) : '';
+  $('sWall').textContent = 'борт ' + f(v.wall) + ', зазор ' + f(v.gap);
+  $('pStep').textContent = 'ступенька ' + f(v.stepW);
+  $('pWall').textContent = 'борт ' + f(v.wall);
+  $('pH').textContent = 'высота ' + f(v.hWall);
+  $('pBack').textContent = 'задник ' + f(v.tBack);
+  $('pFace').textContent = 'лицо ' + f(v.tFace);
+  $('pGap').textContent = 'зазор ' + f(v.gap);
+  $('pStepH').textContent = 'глубина ступ. ' + f(v.stepH);
+  $('wH').textContent = 'борт ' + f(v.hWall);
+  $('wHF').textContent = f(v.hFace);
+  $('wWall').textContent = 'борт корпуса ' + f(v.wall) + ', ступенька ' + f(v.stepW) + ' × ' + f(v.stepH);
+  $('wBack').textContent = 'задник ' + f(v.tBack);
+  $('wCap').textContent = 'крышка ' + f(v.tFace);
+  $('wFW').textContent = 'борт лица ' + f(v.wFace) + ' × ' + f(v.hFace);
+  $('wTongue').textContent = 'язычок ' + f(Math.max(v.stepW - v.gap, 0)) + ' мм';
+
+  const si = $('stripeInfo'); si.innerHTML = '';
+  if (sOn && res && res.stripe){
+    const s = res.stripe;
+    const line = (txt, b) => { const d = document.createElement('div'); d.append(txt + ' '); const e = document.createElement('b'); e.textContent = b; d.appendChild(e); si.appendChild(d); };
+    line('1. Цвет полосы с', `Z ${f(s.z1)} мм · слой ${s.n1}`);
+    line('2. Обратно цвет борта с', `Z ${f(s.z2)} мм · слой ${s.n2}`);
+    const sm = document.createElement('small');
+    sm.textContent = (md === 'shell' ? 'Высоты указаны для оболочки, которая печатается лицом вниз. ' : '') + 'В 3MF полоса уже отдельная часть на пластике 2 — высоты нужны, только если печатаете из STL со сменой вручную.';
+    si.appendChild(sm);
+  } else if (sOn){ si.textContent = 'Полоса не построена — смотрите сообщения ниже.'; }
+
+  const hud = $('hud'); hud.innerHTML = '';
+  const st = $('stats'); st.innerHTML = '';
+  if (!res){ st.innerHTML = '<dt>Статус</dt><dd>исправьте параметры</dd>'; return; }
+  const chips = [`${f(res.w)} × ${f(res.h)} мм`, `глубина в сборе ${f(res.zAll)} мм`, `${res.parts} контур(ов)`];
+  for (const c of chips){ const s = document.createElement('span'); s.className = 'chip'; s.textContent = c; hud.appendChild(s); }
+  const rows = [['Габарит', `${f(res.w)} × ${f(res.h)} мм`]];
+  if (md === 'shell'){
+    rows.push(['Оболочка', `${f(res.zAll)} мм: лицо ${f(v.tFace)} + борт ${f(v.hWall)}`]);
+    rows.push(['Поддон', v.tBack > 0 ? `${f(v.tBack)} мм + бортик ${f(v.lipH)}, меньше контура на ${f(v.wall + v.gap)} мм` : 'нет, буква открыта сзади']);
+    rows.push(['Смена цвета', res.faceLit ? `лицо → борт на Z ${f(v.tFace)} мм печати` : 'не нужна, оболочка одним пластиком']);
+  } else {
+    rows.push(['Корпус', `${f(res.zTop)} мм в высоту`]);
+    rows.push(res.md === 'capped'
+      ? ['Лицо', `${f(res.faceH)} мм: крышка ${f(v.tFace)} + борт ${f(v.hFace)} + язычок ${f(res.tongueH)}`]
+      : ['Лицо', !res.exportFace ? 'не печатается — под акрил' : `${f(v.tFace)} мм, меньше контура на ${f(res.hasStep ? v.wall - v.stepW + v.gap : v.wall + v.gap)} мм`]);
+    rows.push(['Стенка над ступенькой', res.hasStep ? `${f(v.wall - v.stepW)} мм` : '—']);
+  }
+  rows.push(['В сборе', `${f(res.zAll)} мм от стены`]);
+  rows.push(['Сетка', res.cells ? `${res.cells} ячеек, ${gIn ? 'цветная вставка' : 'сквозная'}` : '—']);
+  rows.push(['Полоса', res.stripe ? `${f(res.stripe.sH)} мм, по борту с ${f(res.stripe.from)} мм` : '—']);
+  rows.push(['Файлы', files().map(x => x.name.replace(baseName + '_', '')).join(', ')]);
+  for (const [a, b] of rows){ const dt = document.createElement('dt'); dt.textContent = a; const dd = document.createElement('dd'); dd.textContent = b; st.append(dt, dd); }
+}
+
+/* ---------- STL ---------- */
+function stl(geoms){
+  let n = 0; const list = [];
+  for (const g of geoms){ if (!g) continue; const ng = g.index ? g.toNonIndexed() : g; list.push(ng); n += ng.attributes.position.count / 3; }
+  const buf = new ArrayBuffer(84 + n * 50), dv = new DataView(buf);
+  dv.setUint32(80, n, true);
+  let o = 84; const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), nm = new THREE.Vector3(), t = new THREE.Vector3();
+  for (const g of list){
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i += 3){
+      a.fromBufferAttribute(p, i); b.fromBufferAttribute(p, i + 1); c.fromBufferAttribute(p, i + 2);
+      nm.subVectors(c, b).cross(t.subVectors(a, b)).normalize();
+      for (const q of [nm, a, b, c]){ dv.setFloat32(o, q.x, true); dv.setFloat32(o + 4, q.y, true); dv.setFloat32(o + 8, q.z, true); o += 12; }
+      o += 2;
+    }
+  }
+  return buf;
+}
+const names = () => out.md === 'shell' ? {body: 'poddon', face: 'obolochka', bodyRu: 'Поддон', faceRu: 'Оболочка'} : {body: 'korpus', face: 'lico', bodyRu: 'Корпус', faceRu: 'Лицо'};
+// список файлов без сборки STL — для подписи в «Итоге»
+function files(lazy){
+  if (!out) return [];
+  const n = names(), list = [];
+  const sep = out.md !== 'shell' && $('sepBack').checked;
+  const body = out.bodyParts.filter(p => !(sep && p.role === 'back'));
+  const back = out.bodyParts.filter(p => sep && p.role === 'back');
+  const face = out.exportFace ? out.faceParts.filter(p => p.role !== 'inlay') : [];
+  const inlay = out.exportFace ? out.faceParts.filter(p => p.role === 'inlay') : [];
+  for (const [nm, parts] of [[n.body, body], ['zadnik', back], [n.face, face], [n.face + '_setka', inlay]])
+    if (parts.length) list.push({name: `${baseName}_${nm}.stl`, parts});
+  return list;
+}
+const roleExt = r => r === 'stripe' ? 2 : r === 'face' ? 3 : r === 'inlay' ? 4 : 1;
+/* ---------- 3MF для OrcaSlicer: каждый сегмент — отдельная часть с назначенным пластиком ---------- */
+function meshXML(geoms){
+  const map = new Map(), V = [], T = [];
+  const a = new THREE.Vector3();
+  for (const g0 of geoms){
+    const g = g0.index ? g0.toNonIndexed() : g0, p = g.attributes.position;
+    for (let i = 0; i < p.count; i += 3){
+      const ids = [];
+      for (let j = 0; j < 3; j++){
+        a.fromBufferAttribute(p, i + j);
+        const key = Math.round(a.x * 1e4) + ',' + Math.round(a.y * 1e4) + ',' + Math.round(a.z * 1e4);
+        let id = map.get(key);
+        if (id === undefined){ id = V.length; map.set(key, id); V.push(`<vertex x="${+a.x.toFixed(4)}" y="${+a.y.toFixed(4)}" z="${+a.z.toFixed(4)}"/>`); }
+        ids.push(id);
+      }
+      if (ids[0] !== ids[1] && ids[1] !== ids[2] && ids[0] !== ids[2]) T.push(`<triangle v1="${ids[0]}" v2="${ids[1]}" v3="${ids[2]}"/>`);
+    }
+  }
+  return `<mesh><vertices>${V.join('')}</vertices><triangles>${T.join('')}</triangles></mesh>`;
+}
+const xesc = t => t.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+const roleRu = {body: 'борт', back: 'задник', stripe: 'полоса', face: 'лицо', inlay: 'сетка'};
+async function build3mf(){
+  const n = names();
+  const objects = [
+    {name: n.bodyRu, x: 0, parts: out.bodyParts},
+    {name: n.faceRu, x: out.w + 15, parts: out.exportFace ? out.faceParts : []},
+  ].filter(o => o.parts.length);
+  let id = 1; const res = [], items = [], cfg = [];
+  for (const o of objects){
+    const comps = [], partsCfg = [];
+    o.parts.forEach((p, i) => {
+      const mid = id++, nm = `${o.name} — ${roleRu[p.role]} ${i + 1}`;
+      res.push(`<object id="${mid}" type="model" name="${xesc(nm)}">${meshXML([p.g])}</object>`);
+      comps.push(`<component objectid="${mid}"/>`);
+      partsCfg.push(`    <part id="${mid}" subtype="normal_part">\n      <metadata key="name" value="${xesc(nm)}"/>\n      <metadata key="extruder" value="${roleExt(p.role)}"/>\n    </part>`);
+    });
+    const oid = id++;
+    res.push(`<object id="${oid}" type="model" name="${xesc(o.name)}"><components>${comps.join('')}</components></object>`);
+    items.push(`<item objectid="${oid}" transform="1 0 0 0 1 0 0 0 1 ${o.x.toFixed(3)} 0 0"/>`);
+    cfg.push(`  <object id="${oid}">\n    <metadata key="name" value="${xesc(o.name)}"/>\n    <metadata key="extruder" value="1"/>\n${partsCfg.join('\n')}\n  </object>`);
+  }
+  const model = `<?xml version="1.0" encoding="UTF-8"?>\n<model unit="millimeter" xml:lang="ru-RU" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">\n<metadata name="Title">${xesc(baseName)}</metadata>\n<resources>${res.join('\n')}</resources>\n<build>${items.join('')}</build>\n</model>`;
+  const z = new JSZip();
+  z.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/><Default Extension="config" ContentType="text/xml"/></Types>');
+  z.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>');
+  z.file('3D/3dmodel.model', model);
+  z.file('Metadata/model_settings.config', `<?xml version="1.0" encoding="UTF-8"?>\n<config>\n${cfg.join('\n')}\n</config>\n`);
+  return z.generateAsync({type: 'arraybuffer', compression: 'DEFLATE'});
+}
+
+let dlP = null;
+function downloadsApi(){
+  if (!dlP) dlP = (window.claude && window.claude.use) ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null);
+  return dlP;
+}
+function anchorSave(name, data){
+  const url = URL.createObjectURL(new Blob([data], {type: 'application/octet-stream'}));
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+$('btnZip').addEventListener('click', async () => {
+  const btn = $('btnZip'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'Собираю архив…';
+  try {
+    const zip = new JSZip();
+    for (const fl of files()) zip.file(fl.name, stl(fl.parts.map(p => p.g)));
+    zip.file(baseName + '_orca.3mf', await build3mf());
+    const blob = await zip.generateAsync({type: 'blob', compression: 'DEFLATE'});
+    const dl = await downloadsApi();
+    if (dl){
+      try { await dl.save({filename: baseName + '_stl.zip', data: blob}); show([{t:'ok', m:'Архив сохранён.'}]); }
+      catch(e){ if (e && e.code !== 'declined') show([{t:'err', m:'Не удалось сохранить архив: ' + (e.message || e.code)}]); }
+    } else anchorSave(baseName + '_stl.zip', blob);
+  } finally { btn.textContent = old; btn.disabled = !out; }
+});
+$('btnEach').addEventListener('click', () => { for (const fl of files()) anchorSave(fl.name, stl(fl.parts.map(p => p.g))); });
+$('btn3mf').addEventListener('click', async () => { if (out) anchorSave(baseName + '_orca.3mf', await build3mf()); });
+downloadsApi().then(dl => { if (!dl){ $('btnEach').hidden = false; $('btn3mf').hidden = false; } });
+
+/* ---------- передача в слайсер (BukvaSlicer) ---------- */
+const inSlicer = !!(window.wx && typeof window.wx.postMessage === 'function');
+if (inSlicer){ $('btnSlicer').hidden = false; $('btnZip').classList.remove('primary'); }
+function toBase64(buf){
+  const bytes = new Uint8Array(buf); let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+$('btnSlicer').addEventListener('click', async () => {
+  if (!out) return;
+  const btn = $('btnSlicer'); btn.disabled = true; btn.textContent = 'Отправляю…';
+  try {
+    const data = toBase64(await build3mf());
+    window.wx.postMessage(JSON.stringify({command: 'load_3mf', name: baseName, data}));
+  } catch (e){
+    show([{t:'err', m:'Не удалось собрать модель: ' + e.message}]);
+    btn.disabled = false; btn.textContent = 'Положить на стол слайсера';
+  }
+});
+window.onSlicerReply = p => {
+  const btn = $('btnSlicer'); btn.disabled = !out; btn.textContent = 'Положить на стол слайсера';
+  show([{t: p && p.status === 'ok' ? 'ok' : 'err', m: (p && p.message) || 'Слайсер не ответил.'}]);
+};
+
+/* ---------- управление ---------- */
+let timer = null, needFit = true;
+function recompute(){
+  try {
+    out = build();
+    if (out && !out.bodyParts.length && !out.faceParts.length) out = null;
+  } catch(e){ out = null; show([{t:'err', m:'Не удалось построить модель: ' + e.message}]); }
+  render3d(out, needFit); needFit = false;
+  updateInfo(out);
+  $('btnZip').disabled = !out;
+  $('btnSlicer').disabled = !out;
+}
+function reparse(){
+  try { raw = parseRaw(svgText, parseInt($('quality').value, 10)); }
+  catch(e){ raw = null; show([{t:'err', m:'Файл не читается как SVG: ' + e.message}]); }
+  needFit = true; recompute();
+}
+const sched = () => { clearTimeout(timer); timer = setTimeout(recompute, 160); };
+P.concat(['stripeFrom', 'bodyColor', 'stripeColor', 'gColor']).forEach(k => $(k).addEventListener('input', sched));
+['construct'].forEach(k => $(k).addEventListener('change', () => { needFit = true; recompute(); }));
+['corner', 'faceLit', 'mirrorFace', 'exportFace', 'gridOn', 'gType', 'gPattern', 'stripeOn', 'sepBack'].forEach(k => $(k).addEventListener('change', recompute));
+$('quality').addEventListener('change', reparse);
+
+function loadFile(file){
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = () => { svgText = r.result; baseName = file.name.replace(/\.svg$/i, '').replace(/[^\wа-яё-]+/gi, '_') || 'vyveska'; $('fname').textContent = file.name; reparse(); };
+  r.readAsText(file);
+}
+$('file').addEventListener('change', e => loadFile(e.target.files[0]));
+const drop = $('drop');
+['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
+
+$('tgExplode').addEventListener('click', e => { explode = !explode; e.currentTarget.setAttribute('aria-pressed', explode); render3d(out, false); });
+$('tgFace').addEventListener('click', e => { showFace = !showFace; e.currentTarget.setAttribute('aria-pressed', showFace); if (faceMesh) faceMesh.visible = showFace; });
+
+renderTypes();
+tokens(); resize();
+try { raw = parseRaw(svgText, 24); } catch(e){ raw = null; }
+applyType('shellLit');
+})();
+</script>
+</body>
+</html>
