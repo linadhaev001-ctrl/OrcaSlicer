@@ -1,13 +1,13 @@
 # BukvaSlicer: сборка только установщика Windows x64.
-# Запуск: вкладка Actions → «BukvaSlicer Windows» → Run workflow.
+# Запуск: любой push в ветку bukva или вкладка Actions → «BukvaSlicer Windows» → Run workflow.
 # Готовый установщик лежит в разделе Artifacts у завершённого запуска.
 name: BukvaSlicer Windows
 
 on:
   workflow_dispatch:
   push:
-    tags:
-      - 'bukva-*'
+    branches:
+      - bukva
 
 jobs:
   build_windows:
