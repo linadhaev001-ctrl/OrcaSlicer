@@ -12235,12 +12235,13 @@ function buildAll(p){
   if (fm === 'separate' && (!g || g.depth <= 0)) err('Для отдельного лица нужен паз: задайте C больше нуля или выберите «Заодно с бортом».');
   const zBot = bm === 'integral' ? p.tBack : 0, zTop = fm === 'integral' ? H - p.tFace : H;
   if (zTop - zBot < 1) err('Панели толще самого борта — уменьшите толщину лица или задника.');
-  if (bm === 'tray' && p.trayStyle !== 'skirt' && p.tBack + p.lipH > (g ? g.seat : zTop) - 0.5) err('Поддон с бортиком выше места под лицо — уменьшите бортик.');
-  if (bm === 'tray' && p.lipH > 0 && p.lipW < 0.4) err('Бортик поддона тоньше 0,4 мм не напечатается.');
-  const skirt = bm === 'tray' && p.trayStyle === 'skirt' && p.lipH > 0;
-  const riW = skirt ? (rMax(pts, 0.3) || p.B) : 0, foot = skirt ? Math.max(0, p.lipW + p.gapTray + 0.8 - riW) : 0, riB = riW + foot, pkR1 = riB - p.lipW - p.gapTray, pkTop = p.lipH + p.gapTray;
+  const lipOn = p.lipH > 0 && p.lipW > 0;
+  if (bm === 'tray' && p.trayStyle !== 'skirt' && p.tBack + (lipOn ? p.lipH : 0) > (g ? g.seat : zTop) - 0.5) err('Поддон с бортиком выше места под лицо — уменьшите бортик.');
+  if (bm === 'tray' && lipOn && p.lipW < 0.4) err('Бортик поддона тоньше 0,4 мм не напечатается.');
+  const skirt = bm === 'tray' && p.trayStyle === 'skirt';
+  const riW = skirt ? (rMax(pts, 0.3) || p.B) : 0, foot = skirt && lipOn ? Math.max(0, p.lipW + p.gapTray + 0.8 - riW) : 0, riB = riW + foot, pkR1 = riB - p.lipW - p.gapTray, pkTop = lipOn ? p.lipH + p.gapTray : 0;
   if (foot > 0.001) warn(`Борт у основания утолщён на ${fmt(foot)} мм внутрь под юбку (высота ${fmt(pkTop)} мм).`);
-  if (skirt && pkTop > (g ? g.seat : zTop) - 0.5) err('Юбка выше места под лицо — уменьшите высоту бортика.');
+  if (skirt && lipOn && pkTop > (g ? g.seat : zTop) - 0.5) err('Юбка выше места под лицо — уменьшите высоту бортика.');
   if (hasErr()) return {msgs};
   if (g && p.tFace > g.depth + 0.01 && !g.custom) warn(`Лицо толще паза и выступит над бортом на ${fmt(p.tFace - g.depth)} мм.`);
 
@@ -12304,15 +12305,15 @@ function buildAll(p){
     }
     if (skirt){
       const layers = panel(A, offset(A, -(riB + p.patFrame), p.corner), 0, p.tBack, p.matBack, 'back', patTarget === 'back');
-      const ps = clip(CT.ctDifference, off(riB - p.lipW), off(riB)), ex = toEx(ps);
+      const ex = lipOn ? toEx(clip(CT.ctDifference, off(riB - p.lipW), off(riB))) : [];
       if (ex.length) layers.push({ex, a: p.tBack, b: p.tBack + p.lipH, role: 'back', mat: p.matBack});
-      pieces.push({kind: 'tray', flip: false, z0: 0, z1: p.tBack + p.lipH, layers});
+      pieces.push({kind: 'tray', flip: false, z0: 0, z1: p.tBack + (lipOn ? p.lipH : 0), layers});
     } else if (bm === 'tray'){
       const ri = rMax(pts, 0.3) || p.B, reg = off(ri + p.gapTray);
       if (reg.length){
-        const f = Math.max(0, Math.min(p.fillet, p.lipH));
+        const f = lipOn ? Math.max(0, Math.min(p.fillet, p.lipH)) : 0;
         const layers = panel(reg, offset(reg, -(p.lipW + f + p.patFrame), p.corner), 0, p.tBack, p.matBack, 'back', patTarget === 'back');
-        if (p.lipH > 0){
+        if (lipOn){
           // бортик поддона; галтель — вогнутое скругление между бортиком и пластиной
           const tc = new Map(), offT = r => { if (r < 1e-6) return reg; const key = r.toFixed(4); if (!tc.has(key)) tc.set(key, offset(reg, -r, p.corner)); return tc.get(key); };
           const lp = [{r: 0, z: p.tBack}];
@@ -12324,7 +12325,7 @@ function buildAll(p){
             const ex = toEx(ps); if (ex.length) layers.push({ex, a: bd.a, b: bd.b, role: 'back', mat: p.matBack});
           }
         }
-        pieces.push({kind: 'tray', flip: false, z0: 0, z1: p.tBack + p.lipH, layers});
+        pieces.push({kind: 'tray', flip: false, z0: 0, z1: p.tBack + (lipOn ? p.lipH : 0), layers});
       } else warn(`Буква ${li + 1}: поддон слишком узкий и пропал.`);
     }
     for (const pc of pieces){
@@ -12535,11 +12536,13 @@ function renderResult(fit){
     return;
   }
   const R = result, p = R.p;
-  const trayLift = R.back === 'tray' ? (explode ? p.tBack + p.lipH + 12 : (p.trayStyle === 'skirt' && p.lipH > 0 ? p.tBack : 0)) : 0;
+  const gapE = Math.max(30, R.H);
+  const lipHt = p.lipH > 0 && p.lipW > 0 ? p.lipH : 0;
+  const trayLift = R.back === 'tray' ? (explode ? p.tBack + lipHt + gapE : (p.trayStyle === 'skirt' ? p.tBack : 0)) : 0;
   for (const L of R.letters) for (const pc of L.pieces){
     if (viewMode === 'print'){ ensurePrinted(pc, R); for (const l of pc.layers) v.group.add(new THREE.Mesh(l.pg, matFor(l.mat))); }
     else {
-      const lift = pc.kind === 'tray' ? 0 : pc.kind === 'body' ? trayLift : trayLift + (explode ? Math.max(12, R.H * 0.4) : 0);
+      const lift = pc.kind === 'tray' ? 0 : pc.kind === 'body' ? trayLift : trayLift + (explode ? gapE : 0);
       for (const l of pc.layers){ const m = new THREE.Mesh(l.g, matFor(l.mat)); m.position.z = lift; v.group.add(m); }
     }
   }
@@ -12902,7 +12905,7 @@ function bindUI(){
   bindDrop('dropFile', 'fileSrc', loadFile);
   bindDrop('dropProf', 'fileProf', loadProfile);
   bindDrop('dropFont', 'fileFont', loadFont, true);
-  const setExp = x => { explode = x; $('vAsm').setAttribute('aria-pressed', String(!x)); $('vExplode').setAttribute('aria-pressed', String(x)); renderResult(false); };
+  const setExp = x => { explode = x; $('vAsm').setAttribute('aria-pressed', String(!x)); $('vExplode').setAttribute('aria-pressed', String(x)); renderResult(true); };
   $('vAsm').addEventListener('click', () => setExp(false));
   $('vExplode').addEventListener('click', () => setExp(true));
   $('btn3mf').addEventListener('click', () => download('3mf'));
