@@ -12280,11 +12280,17 @@ function meshVol(g){
 // в одну замкнутую сетку: боковые стенки каждого пояса + горизонтальные «ступеньки» только там, где сечение меняется.
 // Т-стыки (вершина одной грани на ребре другой) убираем — сетка получается связной и без открытых рёбер,
 // и «Разделить на части» в слайсере больше не рассыпает букву на пояса.
-function stackMesh(layers){
+function stackMesh(layers, skins, outline){
+  skins = skins || [];
   const L = layers.filter(l => l.ex.length && l.b - l.a > 1e-6);
   if (!L.length) return null;
   const q6 = z => Math.round(z * 1e6) / 1e6;
-  const zs0 = [...new Set(L.flatMap(l => [q6(l.a), q6(l.b)]))].sort((a, b) => a - b);
+  // рельеф: на границах его зоны уровни не склеиваем, внутри зоны наружную стенку заменяет кожа рельефа
+  const fences = new Set(skins.flatMap(sk => [q6(sk.a), q6(sk.b)]));
+  const zs0 = [...new Set(L.flatMap(l => [q6(l.a), q6(l.b)]).concat([...fences]))].sort((a, b) => a - b);
+  const og = new Map(), OC = 8;
+  if (skins.length && outline) for (const pth of outline) for (const q of pth){ const k = Math.floor(q.X / OC) * 1e7 + Math.floor(q.Y / OC); let l = og.get(k); if (!l){ l = []; og.set(k, l); } l.push(q); }
+  const onOutline = q => { const cx = Math.floor(q.X / OC), cy = Math.floor(q.Y / OC); for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++){ const l = og.get((cx + ox) * 1e7 + cy + oy); if (l) for (const v of l) if (Math.abs(v.X - q.X) <= 3 && Math.abs(v.Y - q.Y) <= 3) return true; } return false; };
   const pathsOf = l => l.ex.flatMap(e => [e.outer].concat(e.holes));
   // сечения по интервалам высоты; одинаковые соседние интервалы склеиваем
   const zs = [zs0[0]], R = [];
@@ -12307,7 +12313,7 @@ function stackMesh(layers){
     // чистка: отрезки и изломы мельче 0,01 мм (остатки округлений скруглений) убираем — для печати они ничего не значат
     const reg = (all.length ? CL.Clipper.CleanPolygons(clip(CT.ctUnion, all, null), 10) : []).map(snapPath).filter(pth => pth.length >= 3);
     const key = reg.length ? pathHash(reg.map(pth => pth.slice().sort((u, v) => u.X - v.X || u.Y - v.Y))) : 'empty';
-    if (key === lastKey){ zs[zs.length - 1] = zb; continue; }
+    if (key === lastKey && !fences.has(za)){ zs[zs.length - 1] = zb; continue; }
     R.push(reg); zs.push(zb); lastKey = key;
   }
   const nI = R.length, TOL = 2, CELL = 2 * S;       // допуск — 0,002 мм (единицы Clipper)
@@ -12351,10 +12357,11 @@ function stackMesh(layers){
     const capRings = []; for (const e of upEx.concat(dnEx)){ capRings.push(e.outer); capRings.push(...e.holes); }
     const capPts = capRings.flat();
     const kb = k > 0 ? keys[k - 1] : new Set(), ka = k < nI ? keys[k] : new Set();
-    if (k > 0) topIns[k - 1] = node(below, grids[k - 1], below.length && (above.length || capPts.length) ? above.flat().concat(capPts).filter(q => !kb.has(vkey(q))) : []);
-    if (k < nI) botIns[k] = node(above, grids[k], above.length && (below.length || capPts.length) ? below.flat().concat(capPts).filter(q => !ka.has(vkey(q))) : []);
+    const skPts = skins.filter(sk => Math.abs(q6(sk.a) - z) < 1e-7 || Math.abs(q6(sk.b) - z) < 1e-7).flatMap(sk => sk.pts);
+    if (k > 0) topIns[k - 1] = node(below, grids[k - 1], below.length && (above.length || capPts.length || skPts.length) ? above.flat().concat(capPts, skPts).filter(q => !kb.has(vkey(q))) : []);
+    if (k < nI) botIns[k] = node(above, grids[k], above.length && (below.length || capPts.length || skPts.length) ? below.flat().concat(capPts, skPts).filter(q => !ka.has(vkey(q))) : []);
     if (capRings.length){
-      const cg = segGrid(capRings), cIns = node(capRings, cg, below.flat().concat(above.flat(), capPts));
+      const cg = segGrid(capRings), cIns = node(capRings, cg, below.flat().concat(above.flat(), capPts, skPts));
       const ring = idx => { const r = capRings[idx], out = []; r.forEach((u, i) => { out.push(u); out.push(...cIns[idx][i]); }); return out; };
       let idx = 0;
       for (const e of upEx.concat(dnEx)){
@@ -12369,10 +12376,12 @@ function stackMesh(layers){
   // боковые стенки: «молния» между узлами низа и верха каждого отрезка (нормаль наружу у Clipper-контуров)
   for (let k = 0; k < nI; k++){
     const za = zs[k], zb = zs[k + 1];
+    const inSkin = skins.some(sk => za >= q6(sk.a) - 1e-7 && zb <= q6(sk.b) + 1e-7);
     R[k].forEach((pth, pi) => {
       const n = pth.length;
       for (let i = 0; i < n; i++){
         const u = pth[i], w = pth[(i + 1) % n]; if (u.X === w.X && u.Y === w.Y) continue;
+        if (inSkin && onOutline(u) && onOutline(w)) continue;        // наружная сторона здесь — кожа рельефа
         const dx = w.X - u.X, dy = w.Y - u.Y, L2 = dx * dx + dy * dy, par = q => ((q.X - u.X) * dx + (q.Y - u.Y) * dy) / L2;
         const bc = [u].concat(botIns[k][pi][i], [w]), tc = [u].concat(topIns[k][pi][i], [w]);
         let a = 0, c = 0;
@@ -12428,7 +12437,16 @@ function stackMesh(layers){
     const stack = faces.map(f => [f[0], f[1], f[2], 0]).filter(t => area2(t[0], t[1], t[2]) !== 0), done = [];
     let guard = 0;
     while (stack.length && guard++ < 1e6){
-      const t = stack.pop(); let sp = false;
+      const t = stack.pop(); let sp = false, needle = false;
+      // «игла»: третья вершина лежит на ребре (в пределах 0,001 мм) — треугольник нулевой толщины выбрасываем,
+      // соседа по длинному ребру поделит та же точка
+      for (let e = 0; e < 3 && !needle; e++){
+        const X = vs[t[e]], Y = vs[t[(e + 1) % 3]], Cv = vs[t[(e + 2) % 3]], dx = Y.X - X.X, dy = Y.Y - X.Y, L2 = dx * dx + dy * dy;
+        if (L2 < 1){ needle = true; break; }
+        const tt = ((Cv.X - X.X) * dx + (Cv.Y - X.Y) * dy) / L2;
+        if (tt > 0 && tt < 1 && Math.abs((Cv.X - X.X) * dy - (Cv.Y - X.Y) * dx) / Math.sqrt(L2) <= 1) needle = true;
+      }
+      if (needle) continue;
       for (let e = 0; e < 3 && !sp; e++){
         const x = t[e], y = t[(e + 1) % 3], c = t[(e + 2) % 3];
         // вершина напротив должна стоять в стороне от ребра — вырожденные (нулевые) треугольники не делим
@@ -12436,7 +12454,7 @@ function stackMesh(layers){
         if (Ln < 1) continue;
         if (t[3] > 60) continue;                                  // предохранитель от зацикливания
         const run = skipped(x, y); if (!run) continue;
-        const ch = [x].concat(run, [y]); for (let j = 0; j + 1 < ch.length; j++) stack.push([ch[j], ch[j + 1], c, t[3] + 1]); sp = true;
+        const ch = [x].concat(run, [y]); for (let j = 0; j + 1 < ch.length; j++) if (area2(ch[j], ch[j + 1], c) !== 0) stack.push([ch[j], ch[j + 1], c, t[3] + 1]); sp = true;
       }
       if (!sp) done.push(t);
     }
@@ -12446,6 +12464,7 @@ function stackMesh(layers){
       if ((ar > 0) === cp.up) tri(P3(a, cp.z), P3(b, cp.z), P3(d, cp.z)); else tri(P3(a, cp.z), P3(d, cp.z), P3(b, cp.z));
     }
   }
+  for (const sk of skins) for (let i = 0; i < sk.pos.length; i++) pos.push(sk.pos[i]);
   return weldGeom(pos);
 }
 // сварка вершин ближе 0,003 мм на одной высоте (разница округления точек пересечения) и удаление вырожденных треугольников
@@ -12492,11 +12511,15 @@ function closeHoles(pos){
   return added;
 }
 // слои печатной детали одного пластика → одна сетка; рельеф («кожа») остаётся отдельной оболочкой
-function mergeLayers(layers){
-  const out = [], groups = new Map();
-  for (const l of layers){ if (l.g){ out.push(l); continue; } if (!groups.has(l.mat)) groups.set(l.mat, []); groups.get(l.mat).push(l); }
-  for (const [mat, ls] of groups){
-    const g = stackMesh(ls); if (!g) continue;
+function mergeLayers(layers, outline){
+  const out = [], groups = new Map(), skins = new Map();
+  for (const l of layers){
+    if (l.skin){ if (!skins.has(l.mat)) skins.set(l.mat, []); skins.get(l.mat).push(l.skin); if (!groups.has(l.mat)) groups.set(l.mat, []); continue; }
+    if (l.g){ out.push(l); continue; } if (!groups.has(l.mat)) groups.set(l.mat, []); groups.get(l.mat).push(l);
+  }
+  for (const [mat, ls0] of groups){
+    const ls = ls0.slice(); for (const l of layers) if (l.skin && l.mat === mat) ls.push(l);
+    const g = stackMesh(ls.filter(l => !l.skin), skins.get(mat) || [], outline); if (!g) continue;
     const cnt = {}; for (const l of ls) cnt[l.role] = (cnt[l.role] || 0) + 1;
     out.unshift({ex: ls.flatMap(l => l.ex), a: Math.min(...ls.map(l => l.a)), b: Math.max(...ls.map(l => l.b)), mat, role: Object.keys(cnt).sort((u, v) => cnt[v] - cnt[u])[0], vol: ls.reduce((t, l) => t + (l.vol || 0), 0), g});
   }
@@ -12636,15 +12659,17 @@ function stripeOf(p, H, zBot, zTop, flip, msgs){
 
 /* ================= сборка модели ================= */
 // рельеф наружной стороны борта: «кожа» вокруг контура с высотой по узору (пупырышки, шипы, пирамидки, ямки)
-function reliefSkin(A, p, z0, z1, za, zb){
+// merge: кожа без внутренней стенки, точки по контуру — на сетке Clipper; сборщик сетки сращивает её со стенкой в один кусок
+function reliefSkin(A, p, z0, z1, za, zb, merge){
   if (za === undefined){ za = z0; zb = z1; }
-  const h = p.relH, pitch = p.relPitch, type = p.relType, e = 0.4;
+  const h = p.relH, pitch = p.relPitch, type = p.relType, e = merge ? 0 : 0.4;
+  const rnd = v => merge ? Math.round(v * S) / S : v;
   const stag = type !== 'pyramids';
   const nRows = Math.max(1, Math.round((z1 - z0) / (stag ? pitch * 0.866 : pitch))), pz = (z1 - z0) / nRows;
   const sub = p.__fine ? 6 : 4, K = Math.max(1, Math.round((zb - za) / (pz / sub))), dzs = (zb - za) / K;
   const area = pth => { let s = 0; for (let i = 0; i < pth.length; i++){ const a = pth[i], b = pth[(i + 1) % pth.length]; s += a.X * b.Y - b.X * a.Y; } return s / 2; };
   const sA0 = Math.sign(area(A[0]));
-  const pos = [], tri = [];
+  const pos = [], tri = [], triIn = [], ipts = [], ptSeen = new Set();
   let cells = 0;
   for (const path of A){
     const pts = path.map(q => ({x: q.X / S, y: q.Y / S}));
@@ -12674,7 +12699,7 @@ function reliefSkin(A, p, z0, z1, za, zb){
       const eo = ed[i], P1 = pts[(i + 1) % m], ns = Math.max(1, Math.ceil(eo.len / dstep));
       for (let s = 1; s < ns; s++){
         const t = s / ns; let nx = vout[i][0] * (1 - t) + vin[(i + 1) % m][0] * t, ny = vout[i][1] * (1 - t) + vin[(i + 1) % m][1] * t; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
-        cols.push({x: P0.x + (P1.x - P0.x) * t, y: P0.y + (P1.y - P0.y) * t, nx, ny, u: u + eo.len * t});
+        cols.push({x: rnd(P0.x + (P1.x - P0.x) * t), y: rnd(P0.y + (P1.y - P0.y) * t), nx, ny, u: u + eo.len * t});
       }
       u += eo.len;
     }
@@ -12702,12 +12727,13 @@ function reliefSkin(A, p, z0, z1, za, zb){
       }
     }
     const O = (c, k) => base + 2 * ((c % nc) * (K + 1) + k), I = (c, k) => O(c, k) + 1;
-    const quad = (a1, b1, c1, d1, flip) => { if (flip) tri.push(a1, c1, b1, a1, d1, c1); else tri.push(a1, b1, c1, a1, c1, d1); };
+    const quad = (a1, b1, c1, d1, flip, inner) => { const t = inner ? triIn : tri; if (flip) t.push(a1, c1, b1, a1, d1, c1); else t.push(a1, b1, c1, a1, c1, d1); };
+    if (merge) for (const q of cols){ const k = Math.round(q.x * S) + ',' + Math.round(q.y * S); if (!ptSeen.has(k)){ ptSeen.add(k); ipts.push({X: Math.round(q.x * S), Y: Math.round(q.y * S)}); } }
     for (let c = 0; c < nc; c++){
       const c1 = c + 1;
       for (let k = 0; k < K; k++){
         quad(O(c, k), O(c1, k), O(c1, k + 1), O(c, k + 1), sg < 0);
-        quad(I(c, k), I(c1, k), I(c1, k + 1), I(c, k + 1), sg > 0);
+        quad(I(c, k), I(c1, k), I(c1, k + 1), I(c, k + 1), sg > 0, merge);
       }
       quad(I(c, 0), I(c1, 0), O(c1, 0), O(c, 0), sg < 0);
       quad(O(c, K), O(c1, K), I(c1, K), I(c, K), sg < 0);
@@ -12715,9 +12741,18 @@ function reliefSkin(A, p, z0, z1, za, zb){
     }
   }
   if (!tri.length) return null;
+  const same = (u, v) => pos[3 * u] === pos[3 * v] && pos[3 * u + 1] === pos[3 * v + 1] && pos[3 * u + 2] === pos[3 * v + 2];
+  if (merge){
+    // объём рельефа — по замкнутой коже (с внутренней стенкой по контуру), в сетку детали внутренняя стенка не идёт
+    const flat = list => { const o = []; for (let i = 0; i < list.length; i += 3){ const u = list[i], v = list[i + 1], w = list[i + 2]; if (same(u, v) || same(v, w) || same(u, w)) continue; for (const j of [u, v, w]) o.push(pos[3 * j], pos[3 * j + 1], pos[3 * j + 2]); } return o; };
+    const outP = flat(tri), inP = flat(triIn), vg = new THREE.BufferGeometry();
+    vg.setAttribute('position', new THREE.Float32BufferAttribute(outP.concat(inP), 3));
+    const vol = meshVol(vg); vg.dispose();
+    return {pos: outP, pts: ipts, vol, a: za, b: zb};
+  }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  const same = (u, v) => pos[3 * u] === pos[3 * v] && pos[3 * u + 1] === pos[3 * v + 1] && pos[3 * u + 2] === pos[3 * v + 2], keep = [];
+  const keep = [];
   for (let i = 0; i < tri.length; i += 3){ const u = tri[i], v = tri[i + 1], w = tri[i + 2]; if (!same(u, v) && !same(v, w) && !same(u, w)) keep.push(u, v, w); }
   g.setIndex(keep);
   const ng = g.toNonIndexed(); g.dispose(); ng.computeVertexNormals();
@@ -12805,7 +12840,7 @@ function* buildGen(p){
   for (let li = 0; li < sel.length; li++){
     yield li / sel.length;
     const part = sel[li];
-    const A = simplifyPaths(scaled(part, k)), bb = bboxOf([A[0]]);
+    const A = CL.Clipper.CleanPolygons(simplifyPaths(scaled(part, k)), 10).filter(pth => pth.length >= 3), bb = bboxOf([A[0]]);
     allBB.x0 = Math.min(allBB.x0, bb.x0); allBB.y0 = Math.min(allBB.y0, bb.y0); allBB.x1 = Math.max(allBB.x1, bb.x1); allBB.y1 = Math.max(allBB.y1, bb.y1);
     if ((bb.x1 - bb.x0) / S > p.bed - 10 || (bb.y1 - bb.y0) / S > p.bed - 10) bigOnes++;
     const ck = letterCacheOn ? pathHash(A) : null;
@@ -12867,7 +12902,8 @@ function* buildGen(p){
       const cl = z => Math.min(Math.max(z, zLo), zHi), segs = stripe ? [[zLo, cl(stripe.z1), false], [cl(stripe.z1), cl(stripe.z2), true], [cl(stripe.z2), zHi, false]] : [[zLo, zHi, false]];
       // «кожа» рельефа заходит в стенку на 0,4 мм — этот слой в расходе не считаем дважды
       const perim = A.reduce((s, pth) => { let L = 0; for (let i = 0; i < pth.length; i++){ const u = pth[i], w = pth[(i + 1) % pth.length]; L += Math.hypot(w.X - u.X, w.Y - u.Y); } return s + L / S; }, 0);
-      for (const [za, zb, st] of segs){ if (zb - za < 1e-6) continue; const rg = reliefSkin(A, p, zLo, zHi, za, zb); if (rg) body.layers.push({g: rg, ex: [], a: za, b: zb, role: st ? 'stripe' : 'wall', mat: st ? p.matStripe : p.matWall, vol: Math.max(0, meshVol(rg) - 0.4 * (zb - za) * perim)}); }
+      for (const [za, zb, st] of segs){ if (zb - za < 1e-6) continue; const rg = reliefSkin(A, p, zLo, zHi, za, zb, true); if (rg) body.layers.push({skin: rg, ex: [], a: za, b: zb, role: st ? 'stripe' : 'wall', mat: st ? p.matStripe : p.matWall, vol: rg.vol}); }
+      body.outline = A;
       body.pad = p.relH;
     }
     const rIn = rMax(pts, (zBot + zTop) / 2);
@@ -12926,9 +12962,9 @@ function* buildGen(p){
       } else warn(`Буква ${li + 1}: поддон слишком узкий и пропал.`);
     }
     for (const pc of pieces){
-      pc.layers = pc.layers.filter(l => l.ex.length || l.g);
+      pc.layers = pc.layers.filter(l => l.ex.length || l.g || l.skin);
       for (const l of pc.layers) if (l.vol == null) l.vol = l.ex.length ? exsArea(l.ex) * (l.b - l.a) : 0;
-      if (!pc.noPrint) pc.layers = mergeLayers(pc.layers);
+      if (!pc.noPrint) pc.layers = mergeLayers(pc.layers, pc.outline);
       for (const l of pc.layers) if (!l.g) l.g = extrude(l.ex, l.a, l.b - l.a);
       pc.layers = pc.layers.filter(l => l.g);
     }
