@@ -75,6 +75,7 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
 .in:focus{outline:none;border-color:var(--accent)}
 .in:disabled{background:var(--soft);color:var(--muted)}
 .g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.g2>.wide{grid-column:1/-1}
 .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 @media (max-width:420px){.g3{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .check{display:flex;gap:9px;align-items:center;cursor:pointer;font-size:14px}
@@ -221,6 +222,7 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
             <select class="in" id="backMode" data-k="backMode"><option value="tray">Поддон с бортиком — вставляется в крышку</option><option value="integral">Заодно с бортом</option><option value="none">Без задника</option></select></label>
           <div class="g2" data-vis="back">
             <label class="f"><span>Толщина пластины, мм</span><input class="in" id="tBack" data-k="tBack" inputmode="decimal"></label>
+            <label class="f wide" data-vis="tray"><span>Посадка борта буквы</span><select class="in" id="trayStyle" data-k="trayStyle"><option value="skirt">Борт ложится на поддон, юбка заходит в борт</option><option value="inner">Поддон вставляется внутрь борта</option></select></label>
             <label class="f" data-vis="tray"><span>Высота бортика, мм</span><input class="in" id="lipH" data-k="lipH" inputmode="decimal"></label>
             <label class="f" data-vis="tray"><span>Толщина бортика, мм</span><input class="in" id="lipW" data-k="lipW" inputmode="decimal"></label>
             <label class="f" data-vis="tray"><span>Галтель бортика, мм</span><input class="in" id="fillet" data-k="fillet" inputmode="decimal"></label>
@@ -11655,7 +11657,7 @@ const DEF = {
   wallType: 'standard', A: 40, B: 1.5, C: 3, G: 0.75, E: 2, alpha: 45, matWall: 1,
   stripeOn: false, stripeH: 10, stripeFrom: '', layerH: 0.2, matStripe: 4,
   faceMode: 'integral', tFace: 1.2, gapFace: 0.15, matFace: 2,
-  backMode: 'tray', tBack: 2, lipH: 8, lipW: 1.6, fillet: 2, gapTray: 0.25, matBack: 1,
+  backMode: 'tray', trayStyle: 'skirt', tBack: 2, lipH: 10, lipW: 1.5, fillet: 2, gapTray: 0.25, matBack: 1,
   patOn: 'face', patMode: 'through', pattern: 'solid', patSize: 12, patRib: 1.2, patFrame: 2, patSeed: 0, matPat: 3,
   c1: '#e2271c', c2: '#f4f2ec', c3: '#26282c', c4: '#f2b632'
 };
@@ -12132,8 +12134,12 @@ function buildAll(p){
   if (fm === 'separate' && (!g || g.depth <= 0)) err('Для отдельного лица нужен паз: задайте C больше нуля или выберите «Заодно с бортом».');
   const zBot = bm === 'integral' ? p.tBack : 0, zTop = fm === 'integral' ? H - p.tFace : H;
   if (zTop - zBot < 1) err('Панели толще самого борта — уменьшите толщину лица или задника.');
-  if (bm === 'tray' && p.tBack + p.lipH > (g ? g.seat : zTop) - 0.5) err('Поддон с бортиком выше места под лицо — уменьшите бортик.');
+  if (bm === 'tray' && p.trayStyle !== 'skirt' && p.tBack + p.lipH > (g ? g.seat : zTop) - 0.5) err('Поддон с бортиком выше места под лицо — уменьшите бортик.');
   if (bm === 'tray' && p.lipH > 0 && p.lipW < 0.4) err('Бортик поддона тоньше 0,4 мм не напечатается.');
+  const skirt = bm === 'tray' && p.trayStyle === 'skirt' && p.lipH > 0;
+  const riW = skirt ? (rMax(pts, 0.3) || p.B) : 0, foot = skirt ? Math.max(0, p.lipW + p.gapTray + 0.8 - riW) : 0, riB = riW + foot, pkR1 = riB - p.lipW - p.gapTray, pkTop = p.lipH + p.gapTray;
+  if (foot > 0.001) warn(`Борт у основания утолщён на ${fmt(foot)} мм внутрь под юбку (высота ${fmt(pkTop)} мм).`);
+  if (skirt && pkTop > (g ? g.seat : zTop) - 0.5) err('Юбка выше места под лицо — уменьшите высоту бортика.');
   if (hasErr()) return {msgs};
   if (g && p.tFace > g.depth + 0.01 && !g.custom) warn(`Лицо толще паза и выступит над бортом на ${fmt(p.tFace - g.depth)} мм.`);
 
@@ -12145,7 +12151,7 @@ function buildAll(p){
     else if (p.patOn === 'back' && bm !== 'none') patTarget = 'back';
     else warn('Узор не наложен: на выбранной панели нет детали.');
   }
-  const bands = bandList(pts, zBot, zTop, stripe ? [stripe.z1, stripe.z2] : []);
+  const bands = bandList(pts, zBot, zTop, (stripe ? [stripe.z1, stripe.z2] : []).concat(skirt ? [pkTop] : []));
   const k = scaleK(), letters = [];
   let cellsTotal = 0, bigOnes = 0, emptyInside = false;
   const allBB = {x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity};
@@ -12166,7 +12172,9 @@ function buildAll(p){
     };
     const body = {kind: 'body', flip: flipBody, z0: 0, z1: H, layers: []};
     for (const bd of bands){
-      const ex = ring(bd.iv); if (!ex.length) continue;
+      let ivs = bd.iv;
+      if (skirt && (bd.a + bd.b) / 2 < pkTop){ if (foot > 0){ let mi = 0; ivs.forEach((q, i) => { if (q[1] > ivs[mi][1]) mi = i; }); ivs = ivs.map((q, i) => i === mi ? [q[0], q[1] + foot] : q); } const o = []; for (const [r1, r2] of ivs){ if (pkR1 >= r2 || riB <= r1) o.push([r1, r2]); else { if (pkR1 > r1) o.push([r1, pkR1]); if (riB < r2) o.push([riB, r2]); } } ivs = o; }
+      const ex = ring(ivs); if (!ex.length) continue;
       const inStripe = stripe && bd.a >= stripe.z1 - 1e-6 && bd.b <= stripe.z2 + 1e-6;
       body.layers.push({ex, a: bd.a, b: bd.b, role: inStripe ? 'stripe' : 'wall', mat: inStripe ? p.matStripe : p.matWall});
     }
@@ -12187,7 +12195,12 @@ function buildAll(p){
         layers: panel(reg, offset(reg, -p.patFrame, p.corner), g.seat, g.seat + p.tFace, p.matFace, 'face', patTarget === 'face')});
       else warn(`Буква ${li + 1}: лицо слишком узкое и пропало.`);
     }
-    if (bm === 'tray'){
+    if (skirt){
+      const layers = panel(A, offset(A, -(riB + p.patFrame), p.corner), 0, p.tBack, p.matBack, 'back', patTarget === 'back');
+      const ps = clip(CT.ctDifference, off(riB - p.lipW), off(riB)), ex = toEx(ps);
+      if (ex.length) layers.push({ex, a: p.tBack, b: p.tBack + p.lipH, role: 'back', mat: p.matBack});
+      pieces.push({kind: 'tray', flip: false, z0: 0, z1: p.tBack + p.lipH, layers});
+    } else if (bm === 'tray'){
       const ri = rMax(pts, 0.3) || p.B, reg = off(ri + p.gapTray);
       if (reg.length){
         const f = Math.max(0, Math.min(p.fillet, p.lipH));
@@ -12415,7 +12428,7 @@ function renderResult(fit){
     return;
   }
   const R = result, p = R.p;
-  const trayLift = explode && R.back === 'tray' ? p.tBack + p.lipH + 12 : 0;
+  const trayLift = R.back === 'tray' ? (explode ? p.tBack + p.lipH + 12 : (p.trayStyle === 'skirt' && p.lipH > 0 ? p.tBack : 0)) : 0;
   for (const L of R.letters) for (const pc of L.pieces){
     if (viewMode === 'print'){ ensurePrinted(pc, R); for (const l of pc.layers) v.group.add(new THREE.Mesh(l.pg, matFor(l.mat))); }
     else {
