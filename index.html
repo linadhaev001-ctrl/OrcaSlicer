@@ -12781,9 +12781,9 @@ function bindUI(){
   bindDrop('dropFile', 'fileSrc', loadFile);
   bindDrop('dropProf', 'fileProf', loadProfile);
   bindDrop('dropFont', 'fileFont', loadFont, true);
-  const setExp = x => { explode = x; .setAttribute('aria-pressed', String(!x)); .setAttribute('aria-pressed', String(x)); renderResult(false); };
-  .addEventListener('click', () => setExp(false));
-  .addEventListener('click', () => setExp(true));
+  const setExp = x => { explode = x; $('vAsm').setAttribute('aria-pressed', String(!x)); $('vExplode').setAttribute('aria-pressed', String(x)); renderResult(false); };
+  $('vAsm').addEventListener('click', () => setExp(false));
+  $('vExplode').addEventListener('click', () => setExp(true));
   $('btn3mf').addEventListener('click', () => download('3mf'));
   $('btnStl').addEventListener('click', () => download('stl'));
   $('btnAll').addEventListener('click', () => download('all'));
