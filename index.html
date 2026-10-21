@@ -82,6 +82,12 @@ header p{margin:0;color:var(--muted);max-width:80ch}
 .lt.A{background:var(--dimA)} .lt.B{background:var(--dimB)} .lt.C{background:var(--dimC)} .lt.D{background:var(--dimD)} .lt.E{background:var(--dimE)}
 .in{width:100%;border:1.5px solid var(--line2);background:var(--panel);color:var(--fg);border-radius:9px;padding:9px 11px;font:16px var(--f-body);font-variant-numeric:tabular-nums;min-width:0}
 textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
+.sp{position:relative;display:block}
+.sp>.in{padding-right:34px}
+.sp .sb{position:absolute;right:3px;top:3px;bottom:3px;width:28px;display:flex;flex-direction:column;gap:2px}
+.sp .sb button{flex:1;border:0;border-radius:6px;background:var(--soft);color:var(--fg);cursor:pointer;font:700 11px/1 var(--f-body);padding:0;user-select:none}
+.sp .sb button:hover{background:var(--accent);color:#000}
+.sp .sb button:active{filter:brightness(.85)}
 .in:focus{outline:none;border-color:var(--accent)}
 .in:disabled{background:var(--soft);color:var(--muted)}
 .g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
@@ -13344,7 +13350,42 @@ function bindDrop(id, inputId, cb, binary){
   ['dragleave', 'drop'].forEach(t => d.addEventListener(t, e => { e.preventDefault(); d.classList.remove('over'); }));
   d.addEventListener('drop', e => readFile(e.dataTransfer.files[0], cb, binary));
 }
+function addSpinners(){
+  document.querySelectorAll('input.in[inputmode="decimal"][data-k]').forEach(el => {
+    if (el.parentNode.classList.contains('sp')) return;
+    const k = el.dataset.k;
+    const w = document.createElement('span'); w.className = 'sp';
+    el.parentNode.insertBefore(w, el); w.appendChild(el);
+    const sb = document.createElement('span'); sb.className = 'sb';
+    const mk = (t, dir) => { const b = document.createElement('button'); b.type = 'button'; b.tabIndex = -1; b.textContent = t; b.title = dir > 0 ? 'Больше (Shift — мельче)' : 'Меньше (Shift — мельче)'; sb.appendChild(b); return b; };
+    const up = mk('▲', 1), dn = mk('▼', -1);
+    w.appendChild(sb);
+    const stepOf = fine => {
+      const v = Math.abs(parseFloat(String(el.value).replace(',', '.')) || 0);
+      let st = el.dataset.step ? +el.dataset.step : (k === 'alpha' || v >= 20 ? 1 : v >= 2 ? 0.5 : 0.1);
+      return fine ? Math.max(0.01, st / 10) : st;
+    };
+    const bump = (dir, fine) => {
+      let v = parseFloat(String(el.value).replace(',', '.')); if (!isFinite(v)) v = +P[k] || 0;
+      const st = stepOf(fine);
+      v = Math.round((v + dir * st) / st * 1e6) / 1e6 * st;
+      if (v < 0) v = 0;
+      el.value = fmt(v, 3);
+      el.dispatchEvent(new Event('input', {bubbles: true}));
+    };
+    const hold = (b, dir) => {
+      let t1, t2;
+      const stop = () => { clearTimeout(t1); clearInterval(t2); };
+      b.addEventListener('pointerdown', e => { e.preventDefault(); bump(dir, e.shiftKey); t1 = setTimeout(() => { t2 = setInterval(() => bump(dir, e.shiftKey), 90); }, 450); });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, stop));
+    };
+    hold(up, 1); hold(dn, -1);
+    el.addEventListener('keydown', e => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown'){ e.preventDefault(); bump(e.key === 'ArrowUp' ? 1 : -1, e.shiftKey); } });
+    el.addEventListener('wheel', e => { if (document.activeElement !== el) return; e.preventDefault(); bump(e.deltaY < 0 ? 1 : -1, e.shiftKey); }, {passive: false});
+  });
+}
 function bindUI(){
+  addSpinners();
   document.querySelectorAll('[data-k]').forEach(el => {
     const k = el.dataset.k;
     const apply = () => {
