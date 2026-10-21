@@ -12239,9 +12239,9 @@ function buildAll(p){
   if (bm === 'tray' && p.trayStyle !== 'skirt' && p.tBack + (lipOn ? p.lipH : 0) > (g ? g.seat : zTop) - 0.5) err('Поддон с бортиком выше места под лицо — уменьшите бортик.');
   if (bm === 'tray' && lipOn && p.lipW < 0.4) err('Бортик поддона тоньше 0,4 мм не напечатается.');
   const skirt = bm === 'tray' && p.trayStyle === 'skirt';
-  const riW = skirt ? (rMax(pts, 0.3) || p.B) : 0, foot = skirt && lipOn ? Math.max(0, p.lipW + p.gapTray + 0.8 - riW) : 0, riB = riW + foot, pkR1 = riB - p.lipW - p.gapTray, pkTop = lipOn ? p.lipH + p.gapTray : 0;
+  const riW = skirt ? (rMax(pts, 0.3) || p.B) : 0, foot = 0, riB = riW + p.gapTray, pkR1 = 0, pkTop = 0;
   if (foot > 0.001) warn(`Юбка шире борта: у основания остаётся наружная стенка ${fmt(pkR1)} мм, юбка частично выходит внутрь за борт.`);
-  if (skirt && lipOn && pkTop > (g ? g.seat : zTop) - 0.5) err('Юбка выше места под лицо — уменьшите высоту бортика.');
+  if (skirt && lipOn && p.lipH > (g ? g.seat : zTop) - 0.5) err('Юбка выше места под лицо — уменьшите высоту бортика.');
   if (hasErr()) return {msgs};
   if (g && p.tFace > g.depth + 0.01 && !g.custom) warn(`Лицо толще паза и выступит над бортом на ${fmt(p.tFace - g.depth)} мм.`);
 
@@ -12304,8 +12304,8 @@ function buildAll(p){
       else warn(`Буква ${li + 1}: лицо слишком узкое и пропало.`);
     }
     if (skirt){
-      const layers = panel(A, offset(A, -(riB + p.patFrame), p.corner), 0, p.tBack, p.matBack, 'back', patTarget === 'back');
-      const ex = lipOn ? toEx(clip(CT.ctDifference, off(riB - p.lipW), off(riB))) : [];
+      const layers = panel(A, offset(A, -(riB + (lipOn ? p.lipW : 0) + p.patFrame), p.corner), 0, p.tBack, p.matBack, 'back', patTarget === 'back');
+      const ex = lipOn ? toEx(clip(CT.ctDifference, off(riB), off(riB + p.lipW))) : [];
       if (ex.length) layers.push({ex, a: p.tBack, b: p.tBack + p.lipH, role: 'back', mat: p.matBack});
       pieces.push({kind: 'tray', flip: false, z0: 0, z1: p.tBack + (lipOn ? p.lipH : 0), layers});
     } else if (bm === 'tray'){
@@ -12572,12 +12572,10 @@ function drawDiagram(){
   const lipOn = tray && P.lipH > 0 && P.lipW > 0, skirtSt = tray && P.trayStyle === 'skirt';
   const zoff = skirtSt ? P.tBack : 0;                       // в сборе борт стоит на плите поддона
   const riW = prof.kind === 'custom' ? maxR : (rMax(prof.pts, 0.3) || P.B);
-  const foot = skirtSt && lipOn ? Math.max(0, P.lipW + P.gapTray + 0.8 - riW) : 0;
-  const riB = riW + foot, pkR1 = Math.min(riB - P.lipW - P.gapTray, riW), pkTop = lipOn ? P.lipH + P.gapTray : 0;
-  const notch = skirtSt && lipOn && prof.kind !== 'custom';
+  const notch = false, pkR1 = 0, pkTop = 0;
   const Htot = Math.max(H + zoff, g ? zoff + g.seat + P.tFace : 0);
   const k = 225 / Htot;
-  const trayR = tray ? (skirtSt ? riB + 0.5 : riW + P.gapTray + (lipOn ? P.lipW : 0) + 0.5) : 0;
+  const trayR = tray ? (skirtSt ? riW + P.gapTray + (lipOn ? P.lipW : 0) + 0.5 : riW + P.gapTray + (lipOn ? P.lipW : 0) + 0.5) : 0;
   const kx = Math.max(k, Math.min(28, 80 / Math.max(maxR, trayR, 2.5)));
   const x0 = 100, y0 = 290, xFar = 296, X = r => x0 + r * kx, Y = z => y0 - z * k;
   const cw = slotColor(P.matWall), cf = slotColor(P.matFace), cb = slotColor(P.matBack);
@@ -12614,13 +12612,13 @@ function drawDiagram(){
     const ri = skirtSt ? 0 : riW + P.gapTray;
     s += slab(ri, 0, P.tBack, cb);
     if (lipOn){
-      const r1 = skirtSt ? riB - P.lipW : ri;
+      const r1 = riW + P.gapTray;
       s += rect(r1, P.tBack, r1 + P.lipW, P.tBack + P.lipH, cb);
       calls.push({tx: X(r1 + P.lipW), ty: Y(P.tBack + P.lipH * 0.5), t: `${skirtSt ? 'Юбка' : 'Бортик'} h · ${fmt(P.lipH)} мм`, col: cT});
       calls.push({tx: X(r1 + P.lipW / 2), ty: Y(P.tBack + P.lipH * 0.85), t: `${skirtSt ? 'Юбка' : 'Бортик'} w · ${fmt(P.lipW)} мм`, col: cT});
     }
     s += lead(rIn - 4, Y(0) + 13, X(skirtSt ? maxR : ri + (lipOn ? P.lipW : 0)) + 14, Y(P.tBack / 2), cT) + T(rIn, Y(0) + 17, `Задник T · ${fmt(P.tBack)} мм`, cT);
-    if (skirtSt && lipOn) calls.push({tx: X(pkR1 + P.gapTray + P.lipW / 2), ty: Y(P.tBack + pkTop - P.gapTray / 2), t: `Зазор g · ${fmt(P.gapTray)} мм`, col: cG, dy: -1});
+    if (lipOn) calls.push({tx: X(riW + P.gapTray / 2), ty: Y(P.tBack + P.lipH * 0.25 + zoff * 0), t: `Зазор g · ${fmt(P.gapTray)} мм`, col: cG});
   }
   // подписи с выносками: раскладываем по вертикали, чтобы не слипались
   calls.sort((a, b) => b.ty - a.ty);
@@ -12641,12 +12639,10 @@ function drawDiagram(){
   if (tray && lipOn){
     const a = skirtSt ? pkR1 : riW, gp = P.gapTray, w = P.lipW, base = skirtSt ? 0 : riW;
     yb += 22;
-    if (skirtSt){
-      s += hd(yb, 0, pkR1, 'var(--dimB)') + hd(yb, pkR1, pkR1 + gp, cG) + hd(yb, pkR1 + gp, pkR1 + gp + w, cT);
-      s += `<text x="${X(0).toFixed(1)}" y="${yb + 20}" style="font-weight:600"><tspan style="fill:var(--dimB)">стенка ${fmt(pkR1)}</tspan><tspan style="fill:${cG}"> · зазор ${fmt(gp)}</tspan><tspan style="fill:${cT}"> · юбка ${fmt(w)} мм</tspan></text>`;
+    if (false){
     } else {
       s += hd(yb, riW, riW + gp, cG) + hd(yb, riW + gp, riW + gp + w, cT);
-      s += `<text x="${X(0).toFixed(1)}" y="${yb + 20}" style="font-weight:600"><tspan style="fill:${cG}">зазор ${fmt(gp)}</tspan><tspan style="fill:${cT}"> · бортик поддона ${fmt(w)} мм</tspan></text>`;
+      s += `<text x="${X(0).toFixed(1)}" y="${yb + 20}" style="font-weight:600"><tspan style="fill:${cG}">зазор ${fmt(gp)}</tspan><tspan style="fill:${cT}"> · ${skirtSt ? 'юбка' : 'бортик поддона'} ${fmt(w)} мм</tspan></text>`;
     }
     yb += 20;
   }
