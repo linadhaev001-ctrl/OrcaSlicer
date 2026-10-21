@@ -226,7 +226,7 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
             <label class="f" data-vis="tray"><span>Высота бортика, мм</span><input class="in" id="lipH" data-k="lipH" inputmode="decimal"></label>
             <label class="f" data-vis="tray"><span>Толщина бортика, мм</span><input class="in" id="lipW" data-k="lipW" inputmode="decimal"></label>
             <label class="f" data-vis="tray"><span>Галтель бортика, мм</span><input class="in" id="fillet" data-k="fillet" inputmode="decimal"></label>
-            <label class="f" data-vis="tray"><span>Зазор посадки, мм</span><input class="in" id="gapTray" data-k="gapTray" inputmode="decimal"></label>
+            <label class="f" data-vis="tray"><span>Зазор юбки и борта, мм</span><input class="in" id="gapTray" data-k="gapTray" inputmode="decimal"></label>
           </div>
           <div class="mat" data-vis="back"><span class="ml">Пластик задника</span><div class="chips" data-chips="matBack"></div></div>
         </div>
@@ -11657,7 +11657,7 @@ const DEF = {
   wallType: 'standard', A: 40, B: 1.5, C: 3, G: 0.75, E: 2, alpha: 45, matWall: 1,
   stripeOn: false, stripeH: 10, stripeFrom: '', layerH: 0.2, matStripe: 4,
   faceMode: 'integral', tFace: 1.2, gapFace: 0.15, matFace: 2,
-  backMode: 'tray', trayStyle: 'skirt', tBack: 2, lipH: 10, lipW: 1.5, fillet: 2, gapTray: 0.25, matBack: 1,
+  backMode: 'tray', trayStyle: 'skirt', tBack: 2, lipH: 10, lipW: 1.5, fillet: 2, gapTray: 0.2, matBack: 1,
   patOn: 'face', patMode: 'through', pattern: 'solid', patSize: 12, patRib: 1.2, patFrame: 2, patSeed: 0, matPat: 3,
   c1: '#e2271c', c2: '#f4f2ec', c3: '#26282c', c4: '#f2b632'
 };
