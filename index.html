@@ -12364,7 +12364,7 @@ function* buildGen(p){
   const bands = bandList(pts, zBot, zTop, (stripe ? [stripe.z1, stripe.z2] : []).concat(skirt ? [pkTop] : []));
   const k = scaleK(), letters = [];
   if (letterCacheOn){ const gk = geomKey(p) + '|' + k; if (gk !== letterCacheKey || letterCache.size > 400){ letterCache.clear(); letterCacheKey = gk; } }
-  let cellsTotal = 0, bigOnes = 0, emptyInside = false;
+  let cellsTotal = 0, bigOnes = 0, emptyInside = false, acrNotches = 0;
   const allBB = {x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity};
   for (let li = 0; li < sel.length; li++){
     yield li / sel.length;
@@ -12385,7 +12385,27 @@ function* buildGen(p){
     let acrPocket = null;
     const off = r => { if (r < 1e-6) return A; const key = r.toFixed(4); if (!cache.has(key)) cache.set(key, offset(A, -r, p.corner)); return cache.get(key); };
     const ring = iv => { let ps = []; for (const [r1, r2] of iv) ps = ps.concat(clip(CT.ctDifference, off(r1), off(r2))); return toEx(ps); };
-    if (fm === 'acrylic') acrPocket = closing(off(g.rIn), p.acrD / 2);
+    // паз под акрил: внутренние углы скруглены под фрезу, но у наружного контура борта всегда остаётся целая стенка
+    // (в острых углах полное скругление прорезало бы борт насквозь)
+    let acrPaths = null;
+    if (fm === 'acrylic'){
+      // 1) желаемый паз: внутренние углы скруглены под фрезу, но у наружного контура всегда остаётся стенка
+      const r = p.acrD / 2, P1 = clip(CT.ctIntersection, closing(off(g.rIn), r), off(Math.min(0.6, g.rIn)));
+      // 2) акрил = паз минус зазор; где фреза не проходит (острые углы уже фрезы) — вырез по фрезе
+      const T1 = offset(P1, -p.acrGap, 'round');
+      acrPaths = T1;
+      if (T1.length){
+        const fb = bboxOf(T1), m = Math.round((4 * r + 2) * S);
+        const box = [[{X: fb.x0 - m, Y: fb.y0 - m}, {X: fb.x1 + m, Y: fb.y0 - m}, {X: fb.x1 + m, Y: fb.y1 + m}, {X: fb.x0 - m, Y: fb.y1 + m}]];
+        const K = clip(CT.ctDifference, box, T1);
+        const resid = clip(CT.ctDifference, K, offset(offset(K, -r, 'round'), r, 'round'));
+        // остатки тоньше зазора не трогаем: фреза оставит там меньше, чем зазор, — акрил всё равно встанет
+        const ep = Math.max(0.03, p.acrGap / 2), rc = offset(offset(resid, -ep), ep, 'round');
+        if (rc.length){ acrPaths = clip(CT.ctDifference, T1, offset(rc, r, 'round')); acrNotches += toEx(rc).length; }
+      }
+      // 3) паз в борту строим по готовому акрилу + зазор: в местах выреза борт заходит в него — дыр в стенке нет
+      acrPocket = acrPaths.length ? offset(acrPaths, p.acrGap, 'round') : P1;
+    }
     // пояс паза под акрил: внутренняя граница борта — скруглённый паз, а не ровный отступ
     const ringP = iv => { const mx = Math.max(...iv.map(q => q[1])); let ps = []; for (const [r1, r2] of iv) ps = ps.concat(clip(CT.ctDifference, off(r1), r2 >= mx - 1e-9 ? acrPocket : off(r2))); return toEx(ps); };
     const panel = (region, I, a, b, mat, role, usePat) => {
@@ -12426,7 +12446,7 @@ function* buildGen(p){
       if (ring.length) lay.push({ex: ring, a: zl, b: H, role: 'face', mat: p.matFace});
       pieces.push({kind: 'face', flip: true, z0: zl, z1: H + p.tFace, layers: lay});
     } else if (fm === 'acrylic'){
-      const ex = toEx(offset(acrPocket, -p.acrGap, 'round'));
+      const ex = toEx(acrPaths);
       if (ex.length) pieces.push({kind: 'acrylic', flip: false, noPrint: true, z0: g.seat, z1: g.seat + p.acrT, outline: ex.flatMap(e => [e.outer].concat(e.holes)),
         layers: [{ex, a: g.seat, b: g.seat + p.acrT, role: 'acrylic', mat: 'acr'}]});
       else warn(`Буква ${li + 1}: акрил слишком узкий и пропал.`);
@@ -12471,6 +12491,7 @@ function* buildGen(p){
   }
   yield 0.98;
   if (hasErr()) return {msgs};
+  if (acrNotches) warn(`В ${acrNotches} ${plural(acrNotches, ['остром углу', 'острых углах', 'острых углах'])} фреза ⌀${fmt(p.acrD, 3)} не проходит — там в акриле сделан вырез по фрезе, а борт заходит в него — стенка без дыр. Чтобы вырезов не было, возьмите фрезу тоньше или стенку толще.`);
   if (emptyInside) warn('Борт заполнил букву целиком — внутри нет полости. Уменьшите толщину борта или увеличьте размер.');
   if (bigOnes) warn(`${bigOnes} ${plural(bigOnes, ['буква больше', 'буквы больше', 'букв больше'])} стола ${fmt(p.bed, 0)} мм — такие буквы придётся резать на части.`);
   const W = (allBB.x1 - allBB.x0) / S, Hh = (allBB.y1 - allBB.y0) / S;
