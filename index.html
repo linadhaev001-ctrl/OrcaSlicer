@@ -151,6 +151,16 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
 .stripeInfo{font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:3px;background:var(--soft)}
 .stripeInfo b{font-family:var(--f-mono);font-weight:600}
 .msgs{display:flex;flex-direction:column;gap:6px}
+.cost{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.chead{display:grid;grid-template-columns:auto repeat(3,minmax(0,170px));gap:8px 14px;align-items:end}
+.chead>b{font-size:16px;align-self:center}
+.ctab{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.ctab th{font-weight:500;color:var(--muted);text-align:right;padding:4px 8px;border-bottom:1px solid var(--line)}
+.ctab td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line)}
+.ctab th:first-child,.ctab td:first-child{text-align:left}
+.ctab tr.tot td{font-weight:700;border-bottom:0;font-size:15px}
+.ctab .sw{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:7px;vertical-align:-1px;border:1px solid var(--line2)}
+@media (max-width:720px){.chead{grid-template-columns:1fr 1fr}.chead>b{grid-column:1/-1}.ctab th:nth-child(3),.ctab td:nth-child(3){display:none}}
 .msgs:empty{display:none}
 .msg{font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid currentColor;background:var(--panel)}
 .msg.err{color:var(--err)} .msg.warn{color:var(--warn)} .msg.ok{color:var(--ok)}
@@ -187,6 +197,16 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
           <button type="button" class="btn primary" id="btnDxf2" hidden>DXF для ЧПУ</button>
         </div>
       </div>
+      <section class="cost" id="costBox" hidden>
+        <div class="chead">
+          <b>Расход материала</b>
+          <label class="f"><span>Пластик</span><select class="in" id="filType" data-k="filType"><option value="pla">PLA · 1,24 г/см³</option><option value="petg">PETG · 1,27 г/см³</option><option value="abs">ABS · 1,04 г/см³</option><option value="asa">ASA · 1,07 г/см³</option><option value="tpu">TPU · 1,21 г/см³</option></select></label>
+          <label class="f"><span>Цена, ₽ за кг</span><input class="in" id="filPrice" data-k="filPrice" inputmode="decimal" data-step="50"></label>
+          <label class="f"><span>Запас, %</span><input class="in" id="filExtra" data-k="filExtra" inputmode="decimal" data-step="5"></label>
+        </div>
+        <table class="ctab" id="costTab"></table>
+        <p class="hint" id="costNote"></p>
+      </section>
       <div class="msgs" id="msgs"></div>
     </main>
 
@@ -11742,6 +11762,7 @@ const DEF = {
   faceMode: 'integral', faceJoin: 'groove', acrT: 3, acrC: 3, acrG: 0.8, acrGap: 0.2, acrD: 3.175, acrShelf: 2, lapW: 0.8, lapH: 4, tFace: 1.2, gapFace: 0.15, matFace: 2,
   backMode: 'tray', trayStyle: 'skirt', tBack: 2, lipH: 10, lipW: 1.5, fillet: 2, gapTray: 0.2, matBack: 1,
   snapOn: false, snapH: 0.4, snapLen: 8, snapStep: 100,
+  filType: 'pla', filPrice: 1500, filExtra: 10,
   relType: 'none', relH: 1.2, relPitch: 6, relMargin: 1,
   decoType: 'none', decoE: 3, decoN: 2, decoPad: 0,
   patOn: 'face', patMode: 'through', pattern: 'solid', patSize: 12, patRib: 1.2, patFrame: 2, patSeed: 0, matPat: 3,
@@ -12243,6 +12264,17 @@ function snapCfg(p, pts, msgs){
   return {gp, hb, c, f, rk, hT, zw0, zb, riW, riB: riW + gp, q, w: 1.2 + hb,
     rz0: zb - c, rh: hb + c, rf: f + c, depth: z => Math.max(0, snapT(z, zb - c, hb + c, f + c, rk) - gp)};
 }
+// объём: призма — площадь × высота; рельеф — объём сетки
+const exsArea = ex => ex.reduce((t, e) => t + exArea(e), 0);   // площадь набора, мм²
+function meshVol(g){
+  const pa = g.attributes.position.array, ix = g.index ? g.index.array : null, n = ix ? ix.length : pa.length / 3;
+  let v = 0;
+  for (let i = 0; i < n; i += 3){
+    const a = 3 * (ix ? ix[i] : i), b = 3 * (ix ? ix[i + 1] : i + 1), c = 3 * (ix ? ix[i + 2] : i + 2);
+    v += pa[a] * (pa[b + 1] * pa[c + 2] - pa[b + 2] * pa[c + 1]) - pa[a + 1] * (pa[b] * pa[c + 2] - pa[b + 2] * pa[c]) + pa[a + 2] * (pa[b] * pa[c + 1] - pa[b + 1] * pa[c]);
+  }
+  return Math.abs(v) / 6;
+}
 function scan(pts, z){
   const xs = [], n = pts.length;
   for (let i = 0; i < n; i++){
@@ -12489,7 +12521,7 @@ function simplifyPaths(A, tolMm){
 let letterCacheOn = false, letterCacheKey = '';
 const letterCache = new Map();
 const MATK = {wall: 'matWall', stripe: 'matStripe', face: 'matFace', back: 'matBack', pattern: 'matPat'};
-function geomKey(p){ return JSON.stringify(Object.keys(p).sort().filter(k => !/^(c\d|mat[A-Z]\w*|bed)$/.test(k)).map(k => [k, p[k]])) + '|' + (profile ? profile.H + ':' + profile.pts.length + ':' + profile.pts.reduce((s, q) => s + q.r * 7 + q.z, 0) : ''); }
+function geomKey(p){ return JSON.stringify(Object.keys(p).sort().filter(k => !/^(c\d|mat[A-Z]\w*|bed|fil[A-Z]\w*)$/.test(k)).map(k => [k, p[k]])) + '|' + (profile ? profile.H + ':' + profile.pts.length + ':' + profile.pts.reduce((s, q) => s + q.r * 7 + q.z, 0) : ''); }
 function pathHash(A){ let h = 2166136261 >>> 0; for (const pth of A){ h = Math.imul(h ^ pth.length, 16777619); for (const q of pth){ h = Math.imul(h ^ q.X, 16777619); h = Math.imul(h ^ q.Y, 16777619); } } return (h >>> 0).toString(36) + ':' + A.length; }
 function buildAll(p){ const it = buildGen(p); let r; do r = it.next(); while (!r.done); return r.value; }
 function* buildGen(p){
@@ -12607,7 +12639,9 @@ function* buildGen(p){
     }
     if (relOn){
       const cl = z => Math.min(Math.max(z, zLo), zHi), segs = stripe ? [[zLo, cl(stripe.z1), false], [cl(stripe.z1), cl(stripe.z2), true], [cl(stripe.z2), zHi, false]] : [[zLo, zHi, false]];
-      for (const [za, zb, st] of segs){ if (zb - za < 1e-6) continue; const rg = reliefSkin(A, p, zLo, zHi, za, zb); if (rg) body.layers.push({g: rg, ex: [], a: za, b: zb, role: st ? 'stripe' : 'wall', mat: st ? p.matStripe : p.matWall}); }
+      // «кожа» рельефа заходит в стенку на 0,4 мм — этот слой в расходе не считаем дважды
+      const perim = A.reduce((s, pth) => { let L = 0; for (let i = 0; i < pth.length; i++){ const u = pth[i], w = pth[(i + 1) % pth.length]; L += Math.hypot(w.X - u.X, w.Y - u.Y); } return s + L / S; }, 0);
+      for (const [za, zb, st] of segs){ if (zb - za < 1e-6) continue; const rg = reliefSkin(A, p, zLo, zHi, za, zb); if (rg) body.layers.push({g: rg, ex: [], a: za, b: zb, role: st ? 'stripe' : 'wall', mat: st ? p.matStripe : p.matWall, vol: Math.max(0, meshVol(rg) - 0.4 * (zb - za) * perim)}); }
       body.pad = p.relH;
     }
     const rIn = rMax(pts, (zBot + zTop) / 2);
@@ -12667,7 +12701,7 @@ function* buildGen(p){
     }
     for (const pc of pieces){
       pc.layers = pc.layers.filter(l => l.ex.length || l.g);
-      for (const l of pc.layers) if (!l.g) l.g = extrude(l.ex, l.a, l.b - l.a);
+      for (const l of pc.layers){ if (l.vol == null) l.vol = l.ex.length ? exsArea(l.ex) * (l.b - l.a) : 0; if (!l.g) l.g = extrude(l.ex, l.a, l.b - l.a); }
       pc.layers = pc.layers.filter(l => l.g);
     }
     letters.push({index: li + 1, pieces: pieces.filter(pc => pc.layers.length), w: (bb.x1 - bb.x0) / S, h: (bb.y1 - bb.y0) / S});
@@ -12723,7 +12757,7 @@ function packOut(R){
       const g = l.g.index ? l.g.toNonIndexed() : l.g, pos = g.attributes.position.array.slice(), nr = g.attributes.normal ? g.attributes.normal.array.slice() : null;
       tr.push(pos.buffer); if (nr) tr.push(nr.buffer);
       if (g !== l.g) g.dispose();
-      return {a: l.a, b: l.b, role: l.role, mat: l.mat, pos, nr};
+      return {a: l.a, b: l.b, role: l.role, mat: l.mat, vol: l.vol, pos, nr};
     })}))}));
   return {R: Object.assign({}, R, {letters}), tr};
 }
@@ -13296,6 +13330,7 @@ function rebuildSource(){
 }
 function onParam(k){
   save();
+  if (/^fil[A-Z]/.test(k)){ fillStats(); drawCost(); return; }
   if (/^c\d$/.test(k)){ for (const i in matCache) if (/^\d+$/.test(i)) matFor(+i); if (V) V.dirty = true; refreshUI(); return; }
   if (k === 'text' || k === 'font' || k === 'txtH' || k === 'txtGap'){ summaries(); clearTimeout(srcTimer); srcTimer = setTimeout(rebuildSource, 300); return; }
   if (k === 'src' || k === 'flipX'){ refreshUI(); rebuildSource(); return; }
@@ -13466,7 +13501,7 @@ function applyResult(R){
   drawDiagram();
   if (old) disposeResult(old);
   showMsgs('msgs', srcMsgs.concat(R.msgs));
-  fillStats(); stripeText(); drawAcr(); hideProgress(); setBusy(false);
+  fillStats(); stripeText(); drawAcr(); drawCost(); hideProgress(); setBusy(false);
 }
 function fillStats(){
   const st = $('stats'); st.innerHTML = '';
@@ -13482,10 +13517,44 @@ function fillStats(){
     ['Габарит', `${fmt(R.W, 0)} × ${fmt(R.Hh, 0)} × ${fmt(R.depth, 0)} мм`],
     ['Пластики', [...mats].sort().map(m => '№' + m).join(', ')]
   ];
+  { const u = usageOf(R), [, rho] = FIL[P.filType] || FIL.pla; if (u){ const gr = Object.keys(u.vol).filter(x => /^\d+$/.test(x)).reduce((s, x) => s + u.vol[x], 0) / 1000 * rho * (1 + Math.max(0, P.filExtra || 0) / 100); rows.push(['Пластик', gr >= 1000 ? `≈ ${fmt(gr / 1000, 2)} кг` : `≈ ${fmt(gr, 0)} г`]); } }
   if (R.cellsTotal) rows.push(['Ячеек узора', String(R.cellsTotal)]);
   if (R.face === 'acrylic') rows.push(['Акрил', `${fmt(R.p.acrT)} мм, фреза ⌀${fmt(R.p.acrD, 3)}`]);
   if (R.back === 'pvc') rows.push(['ПВХ', `${fmt(R.p.tBack)} мм, фреза ⌀${fmt(R.p.acrD, 3)}`]);
   for (const [a, b] of rows){ const d = document.createElement('div'), dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = a; dd.textContent = b; d.append(dt, dd); st.appendChild(d); }
+}
+// расход пластика по объёму модели; ЧПУ-детали — по площади листа
+const FIL = {pla: ['PLA', 1.24], petg: ['PETG', 1.27], abs: ['ABS', 1.04], asa: ['ASA', 1.07], tpu: ['TPU', 1.21]};
+function usageOf(R){
+  if (!R || !R.letters) return null;
+  if (R.__use) return R.__use;
+  const vol = {}, sheet = {};
+  for (const L of R.letters) for (const pc of L.pieces){
+    if (pc.noPrint){
+      if (pc.outline){ let a = 0; for (const pth of pc.outline) a += CL.Clipper.Area(pth); sheet[pc.kind] = (sheet[pc.kind] || 0) + Math.abs(a) / (S * S); }
+      continue;
+    }
+    for (const l of pc.layers) vol[l.mat] = (vol[l.mat] || 0) + (l.vol || 0);
+  }
+  return (R.__use = {vol, sheet});
+}
+function drawCost(){
+  const box = $('costBox'); if (!box) return;
+  const u = usageOf(result); box.hidden = !u; if (!u) return;
+  const [fname, rho] = FIL[P.filType] || FIL.pla, k = 1 + Math.max(0, P.filExtra || 0) / 100, price = Math.max(0, P.filPrice || 0);
+  const g = mm3 => mm3 / 1000 * rho * k, m = gr => gr / (rho * 2.405), rub = gr => gr / 1000 * price;
+  const F = (v, d) => fmt(v, d === undefined ? 0 : d);
+  const slots = Object.keys(u.vol).filter(x => /^\d+$/.test(x)).sort();
+  let html = `<tr><th>Материал</th><th>Вес</th><th>Нить ⌀1,75</th><th>Стоимость</th></tr>`, tg = 0;
+  for (const sl of slots){
+    const gr = g(u.vol[sl]); tg += gr;
+    html += `<tr${slots.length === 1 ? ' class="tot"' : ''}><td><span class="sw" style="background:${slotColor(sl)}"></span>${fname} · пластик №${sl}</td><td>${F(gr)} г</td><td>${F(m(gr), 1)} м</td><td>${price ? F(rub(gr)) + ' ₽' : '—'}</td></tr>`;
+  }
+  if (slots.length > 1) html += `<tr class="tot"><td>Итого пластик</td><td>${tg >= 1000 ? F(tg / 1000, 2) + ' кг' : F(tg) + ' г'}</td><td>${F(m(tg), 0)} м</td><td>${price ? F(rub(tg)) + ' ₽' : '—'}</td></tr>`;
+  const SH = {acrylic: ['Акрил', P.acrT], pvc: ['Лист ПВХ', P.tBack]};
+  for (const kind in u.sheet){ const [nm, t] = SH[kind] || [kind, 0]; html += `<tr><td><span class="sw" style="background:${kind === 'pvc' ? '#d6d9dc' : '#dfe9f2'}"></span>${nm} ${fmt(t)} мм — режется на ЧПУ</td><td colspan="3">${F(u.sheet[kind] / 1e6, 3)} м² по деталям</td></tr>`; }
+  $('costTab').innerHTML = html;
+  $('costNote').textContent = `Вес — по объёму модели${k > 1 ? ` плюс запас ${fmt(P.filExtra, 0)}%` : ''}: борта и панели тонкие и печатаются сплошными, поэтому слайсер покажет близкую цифру. При печати в несколько цветов слайсер добавит отходы на смену пластика (башня очистки) — их покрывает запас. Для листа ПВХ и акрила указана площадь самих деталей, без раскроя листа.`;
 }
 function stripeText(){
   const si = $('stripeInfo'); if (!si) return;
@@ -13635,7 +13704,7 @@ function bindUI(){
   downloadsApi().then(dl => { dlMode = !!dl; $('btnAll').hidden = !dlMode; $('btn3mf').hidden = dlMode; $('btnStl').hidden = dlMode; });
 }
 
-window.__bukvy = {P, DEF, rebuildSource, buildAll, drawSnap, snapCfg, snapT, clip, offset, CT, drawDiagram, decoProfile, profileOf, bandList, DECO, build3mf, stlGroups, stl, dxfToItems, acrylicDxf, makeCells, loadFile, loadProfile, textItems,
+window.__bukvy = {P, DEF, rebuildSource, buildAll, usageOf, meshVol, drawSnap, snapCfg, snapT, clip, offset, CT, drawDiagram, decoProfile, profileOf, bandList, DECO, build3mf, stlGroups, stl, dxfToItems, acrylicDxf, makeCells, loadFile, loadProfile, textItems,
   select: ids => { selected = new Set(ids); }, get parts(){ return parts; }, get result(){ return result; }, set result(r){ result = r; }, disposeResult};
 
 fillFonts();
