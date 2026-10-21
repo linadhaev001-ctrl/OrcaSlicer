@@ -223,7 +223,7 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
         <summary><span class="dot" id="dotTop"></span><span class="bt"><b>Крышка: борт и лицо</b><small id="sTop"></small></span><span class="chev"></span></summary>
         <div class="bb">
           <label class="f"><span>Лицо</span>
-            <select class="in" id="faceMode" data-k="faceMode"><option value="acrylic">Акрил в паз борта — режется на ЧПУ, отдаётся DXF</option><option value="integral">Заодно с бортом — крышка одной деталью</option><option value="separate">Отдельной деталью, в паз борта</option><option value="none">Без лица, буква открыта</option></select></label>
+            <select class="in" id="faceMode" data-k="faceMode"><option value="integral">Заодно с бортом — крышка одной деталью</option><option value="separate">Отдельной деталью, в паз борта</option><option value="none">Без лица, буква открыта</option></select></label>
           <label class="f" data-vis="faceSepStd"><span>Соединение лица с бортом</span>
             <select class="in" id="faceJoin" data-k="faceJoin"><option value="groove">Паз внутри борта — лицо вкладывается</option><option value="lap">Замок снаружи — паз у борта и у лица (внахлёст)</option></select></label>
           <div class="g2" data-vis="lap">
@@ -241,7 +241,7 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
           <div class="sub" data-vis="notAcr">Профиль борта</div>
           <label class="f" data-vis="notAcr"><span>Тип борта</span>
             <select class="in" id="wallType" data-k="wallType"><option value="standard">Стандартный, с пазом</option><option value="ledge">С выступом под лицо</option></select></label>
-          <p class="hint" data-vis="acr">Паз под акрил и полка задаются в блоке «Резка на ЧПУ: акрил и ПВХ».</p>
+          
           <p class="hint" data-vis="grooveOff">Паз не нужен: лицо печатается заодно с бортом.</p>
           <div class="g2" data-vis="grooveOn">
             <label class="f" data-vis="groove"><span><i class="lt C">C</i> Глубина паза</span><input class="in" id="C" data-k="C" inputmode="decimal"></label>
@@ -254,25 +254,14 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
       </details>
 
       <details class="blk" id="blkAcr">
-        <summary><span class="dot" style="--c:#dfe9f2"></span><span class="bt"><b>Резка на ЧПУ: акрил и ПВХ</b><small id="sAcr"></small></span><span class="chev"></span></summary>
+        <summary><span class="dot" style="--c:#dfe9f2"></span><span class="bt"><b>Резка на ЧПУ: задник из ПВХ</b><small id="sAcr"></small></span><span class="chev"></span></summary>
         <div class="bb">
-          <label class="check"><input type="checkbox" id="acrOn"> Лицо из акрила — вклеивается в паз борта</label>
+          
           <label class="check"><input type="checkbox" id="pvcOn"> Задник из листа ПВХ — борт ставится сверху</label>
           <p class="hint">Эти детали не печатаются: они режутся фрезой и скачиваются кривыми в DXF. Внутренние углы скругляются по радиусу фрезы — так, как их оставит станок. Контур чистовой, по детали: коррекцию на фрезу задаёт программа станка.</p>
           <label class="f" data-vis="cnc"><span>Диаметр фрезы, мм (обычно 1–9)</span><input class="in" id="acrD" data-k="acrD" inputmode="decimal"></label>
           <div class="presets" data-vis="cnc"><span class="ml">Частые фрезы</span><button type="button" class="btn sm" data-acrd="1">1</button><button type="button" class="btn sm" data-acrd="2">2</button><button type="button" class="btn sm" data-acrd="3.175">3,175</button><button type="button" class="btn sm" data-acrd="4">4</button><button type="button" class="btn sm" data-acrd="6">6</button><button type="button" class="btn sm" data-acrd="8">8</button></div>
-          <div class="sub" data-vis="acr">Лицо из акрила</div>
-          <div class="g2" data-vis="acr">
-            <label class="f"><span>Толщина акрила, мм</span><input class="in" id="acrT" data-k="acrT" inputmode="decimal"></label>
-            <label class="f"><span>Глубина паза, мм</span><input class="in" id="acrC" data-k="acrC" inputmode="decimal"></label>
-            <label class="f"><span>Заход на борт, мм</span><input class="in" id="acrG" data-k="acrG" inputmode="decimal"></label>
-            <label class="f"><span>Зазор в пазу, мм</span><input class="in" id="acrGap" data-k="acrGap" inputmode="decimal"></label>
-            <label class="f wide"><span>Полка под акрил внутри борта, мм (0 — без полки)</span><input class="in" id="acrShelf" data-k="acrShelf" inputmode="decimal"></label>
-          </div>
-          <p class="hint" data-vis="acr">Полка идёт по всему борту изнутри, сразу под акрилом, и держит его снизу. Снизу у неё скос 45° — печатается без поддержек.</p>
-          <div class="acrcorner" id="acrCorner" data-vis="acr"></div>
-          <div class="acrview" id="acrView" data-vis="acr"></div>
-          <p class="hint" id="acrNote" data-vis="acr"></p>
+          
           <div class="sub" data-vis="pvc">Задник из ПВХ</div>
           <p class="hint" data-vis="pvc">Толщина листа — поле «Толщина пластины» в блоке «Основа: задник». Лист режется по наружному контуру букв, отверстия букв (внутри «О», «А») вырезаются.</p>
           <div class="acrview" id="pvcView" data-vis="pvc"></div>
@@ -11764,6 +11753,7 @@ try { const s = JSON.parse(localStorage.getItem(LS) || 'null'); if (s && typeof 
 if (P.src === 'file') P.src = 'text'; // файл не сохраняется между заходами
 if (!FONT_DATA[P.font]) P.font = DEF.font;
 if (P.wallType === 'custom') P.wallType = 'standard';   // свой профиль из файла убран из меню
+if (P.faceMode === 'acrylic') P.faceMode = 'integral';   // в базовой версии акрила нет
 const save = () => { try { localStorage.setItem(LS, JSON.stringify(P)); } catch (e) {} };
 
 let fileName = 'vyveska', parts = [], selected = new Set(), fileBox = null, profile = null, result = null, dlMode = false;
@@ -12089,20 +12079,6 @@ function profileOf(p, msgs){
     if (B - w - gp < 0.4){ err(`Замок внахлёст: стенка борта должна быть не меньше ${fmt(w + gp + 0.4)} мм (сейчас ${fmt(B)}). Увеличьте стенку B или уменьшите ширину замка.`); return null; }
     if (h > A - 2){ err('Замок выше борта — уменьшите высоту замка.'); return null; }
     return {pts: [{r: 0, z: 0}, {r: B, z: 0}, {r: B, z: A}, {r: w + gp, z: A}, {r: w + gp, z: A - h}, {r: 0, z: A - h}], H: A, W: B, kind: 'lap'};
-  }
-  if (p.faceMode === 'acrylic'){
-    if (p.wallType === 'custom'){ err('Для лица из акрила выберите стандартный тип борта — свой профиль здесь не поддерживается.'); return null; }
-    const C = p.acrC, G = p.acrG;
-    if (!(C > 0) || !(G > 0)){ err('Акрил: глубина паза и заход на борт должны быть больше нуля.'); return null; }
-    if (C > A - 2){ err('Паз под акрил глубже борта — уменьшите глубину паза.'); return null; }
-    if (B - G < 0.4){ err(`Над пазом под акрил остаётся ${fmt(B - G)} мм стенки, нужно не меньше 0,4 мм. Увеличьте стенку B или уменьшите заход акрила.`); return null; }
-    const E = Math.max(0, p.acrShelf || 0), seat = A - C;
-    if (E > 0){
-      if (seat - 1 - E < 1){ err('Полка под акрил не помещается по высоте борта — уменьшите полку или глубину паза.'); return null; }
-      // полка внутри борта под акрилом: сверху ровная (на неё ложится акрил), снизу скос 45° — печать без поддержек
-      return {pts: [{r: 0, z: 0}, {r: B, z: 0}, {r: B, z: seat - 1 - E}, {r: B + E, z: seat - 1}, {r: B + E, z: seat}, {r: B - G, z: seat}, {r: B - G, z: A}, {r: 0, z: A}], H: A, W: B + E, kind: 'acrylic'};
-    }
-    return {pts: [{r: 0, z: 0}, {r: B, z: 0}, {r: B, z: A - C}, {r: B - G, z: A - C}, {r: B - G, z: A}, {r: 0, z: A}], H: A, W: B, kind: 'acrylic'};
   }
   if (p.wallType === 'standard'){
     if (!(p.C > 0) || !(p.G > 0)) return rect;
@@ -12530,10 +12506,6 @@ function* buildGen(p){
   if (bm !== 'none' && p.tBack < 0.4) err('Задник тоньше 0,4 мм не напечатается.');
   const g = fm === 'separate' || fm === 'acrylic' ? grooveOf(p, prof) : null;
   if ((fm === 'acrylic' || bm === 'pvc') && !(p.acrD >= 0.5 && p.acrD <= 12)) err('Диаметр фрезы — от 0,5 до 12 мм.');
-  if (fm === 'acrylic'){
-    if (!(p.acrT >= 0.5)) err('Толщина акрила — не меньше 0,5 мм.');
-    if (!(p.acrGap >= 0)) err('Зазор акрила не может быть отрицательным.');
-  }
   if (fm === 'separate' && prof.kind !== 'lap' && (!g || g.depth <= 0)) err('Для отдельного лица нужен паз: задайте C больше нуля или выберите «Заодно с бортом».');
   const zBot = bm === 'integral' ? p.tBack : 0, zTop = fm === 'integral' ? H - p.tFace : H;
   if (zTop - zBot < 1) err('Панели толще самого борта — уменьшите толщину лица или задника.');
@@ -12547,10 +12519,6 @@ function* buildGen(p){
   if (foot > 0.001) warn(`Юбка шире борта: у основания остаётся наружная стенка ${fmt(pkR1)} мм, юбка частично выходит внутрь за борт.`);
   if (skirt && lipOn && p.lipH > (g ? g.seat : zTop) - 0.5) err('Юбка выше места под лицо — уменьшите высоту бортика.');
   if (hasErr()) return {msgs};
-  if (fm === 'acrylic' && g){
-    if (p.acrT > g.depth + 0.01) warn(`Акрил толще паза и выступит над бортом на ${fmt(p.acrT - g.depth)} мм.`);
-    if (p.B - p.acrG < 0.8) warn(`Над пазом остаётся ${fmt(p.B - p.acrG)} мм стенки — на скруглениях паза она может прорезаться. Для акрила лучше стенка B от 2 мм.`);
-  }
   if (fm !== 'acrylic' && g && p.tFace > g.depth + 0.01 && !g.custom) warn(`Лицо толще паза и выступит над бортом на ${fmt(p.tFace - g.depth)} мм.`);
 
   const flipBody = fm === 'integral';
@@ -12597,27 +12565,6 @@ function* buildGen(p){
     // паз под акрил: внутренние углы скруглены под фрезу, но у наружного контура борта всегда остаётся целая стенка
     // (в острых углах полное скругление прорезало бы борт насквозь)
     let acrPaths = null;
-    if (fm === 'acrylic'){
-      // 1) желаемый паз: внутренние углы скруглены под фрезу, но у наружного контура всегда остаётся стенка
-      const r = p.acrD / 2, P1 = clip(CT.ctIntersection, closing(off(g.rIn), r), off(Math.min(0.6, g.rIn)));
-      // 2) акрил = паз минус зазор; где фреза не проходит (острые углы уже фрезы) — вырез по фрезе
-      const T1 = offset(P1, -p.acrGap, 'round');
-      acrPaths = T1;
-      if (T1.length){
-        const fb = bboxOf(T1), m = Math.round((4 * r + 2) * S);
-        const box = [[{X: fb.x0 - m, Y: fb.y0 - m}, {X: fb.x1 + m, Y: fb.y0 - m}, {X: fb.x1 + m, Y: fb.y1 + m}, {X: fb.x0 - m, Y: fb.y1 + m}]];
-        const K = clip(CT.ctDifference, box, T1);
-        // недоступные фрезе места — только рядом с акрилом (углы рамки-«коробки» не в счёт)
-        const resid = clip(CT.ctIntersection, clip(CT.ctDifference, K, offset(offset(K, -r, 'round'), r, 'round')), offset(T1, 2 * r, 'round'));
-        // остатки тоньше зазора не трогаем: фреза оставит там меньше, чем зазор, — акрил всё равно встанет
-        const ep = Math.max(0.03, p.acrGap / 2), rc = offset(offset(resid, -ep), ep, 'round');
-        if (rc.length){ acrPaths = clip(CT.ctDifference, T1, offset(rc, r, 'round')); acrNotches += toEx(rc).length; }
-      }
-      // 3) паз в борту строим по готовому акрилу + зазор: в местах выреза борт заходит в него — дыр в стенке нет
-      acrPocket = acrPaths.length ? offset(acrPaths, p.acrGap, 'round') : P1;
-    }
-    // пояс паза под акрил: внутренняя граница борта — скруглённый паз, а не ровный отступ
-    const ringP = iv => { const mx = Math.max(...iv.map(q => q[1])); let ps = []; for (const [r1, r2] of iv) ps = ps.concat(clip(CT.ctDifference, off(r1), r2 >= mx - 1e-9 ? acrPocket : off(r2))); return toEx(ps); };
     const panel = (region, I, a, b, mat, role, usePat) => {
       const cells = usePat ? makeCells(I, p, msgs) : null;
       if (!cells) return [{ex: toEx(region), a, b, role, mat}];
@@ -12679,11 +12626,6 @@ function* buildGen(p){
       const ring = toEx(clip(CT.ctDifference, off(0), off(lw)));
       if (ring.length) lay.push({ex: ring, a: zl, b: H, role: 'face', mat: p.matFace});
       pieces.push({kind: 'face', flip: true, z0: zl, z1: H + p.tFace, layers: lay});
-    } else if (fm === 'acrylic'){
-      const ex = toEx(acrPaths);
-      if (ex.length) pieces.push({kind: 'acrylic', flip: false, noPrint: true, z0: g.seat, z1: g.seat + p.acrT, outline: ex.flatMap(e => [e.outer].concat(e.holes)),
-        layers: [{ex, a: g.seat, b: g.seat + p.acrT, role: 'acrylic', mat: 'acr'}]});
-      else warn(`Буква ${li + 1}: акрил слишком узкий и пропал.`);
     } else if (fm === 'separate'){
       const reg = off(g.rIn + p.gapFace);
       if (reg.length) pieces.push({kind: 'face', flip: true, z0: g.seat, z1: g.seat + p.tFace,
@@ -13074,11 +13016,6 @@ function drawDiagram(){
   const calls = [];                   // подписи с выносками: {y: цель по вертикали, tx, ty: точка на детали, t, col}
   // --- лицо
   if (fm === 'integral'){ const ro = rMin(prof.pts, H - P.tFace / 2) || 0; s += slab(ro, zoff + H - P.tFace, zoff + H, cf); s += T(xFar, Y(zoff + H) - 7, `Лицо D · ${fmt(P.tFace)} мм`, 'var(--dimD)', 'end'); }
-  if (fm === 'acrylic' && g && P.acrShelf > 0){ const yy = Y(zoff + g.seat) + 46; s += lead(rIn - 4, yy - 4, X(P.B + P.acrShelf * 0.6), Y(zoff + g.seat - 0.5), '#bcd3e6') + T(rIn, yy, `Полка под акрил · ${fmt(P.acrShelf)} мм`, '#bcd3e6'); }
-  if (fm === 'acrylic' && g){
-    s += slab(g.rIn + P.acrGap, zoff + g.seat, zoff + g.seat + P.acrT, '#dfe9f2', true);
-    s += T(xFar, Y(zoff + g.seat + P.acrT) - 7, `Акрил ${fmt(P.acrT)} мм · зазор ${fmt(P.acrGap)} · фреза ⌀${fmt(P.acrD, 3)}`, '#bcd3e6', 'end');
-  }
   if (fm === 'separate' && g){
     s += slab(g.rIn + P.gapFace, zoff + g.seat, zoff + g.seat + P.tFace, cf, true);
     s += T(xFar, Y(zoff + g.seat + P.tFace) - 7, `Лицо D · ${fmt(P.tFace)} мм · зазор ${fmt(P.gapFace)}`, 'var(--dimD)', 'end');
@@ -13321,7 +13258,6 @@ function refreshUI(){
     const nt = $('decoNote'); if (nt) nt.textContent = P.decoType === 'none' ? '' : 'Борт — пустая оболочка одной толщины B: внутренняя сторона повторяет наружную, слайсер печатает его одними стенками, без заполнения. Скаты не круче 45° — если вылет слишком большой, он уменьшится сам. Снизу на высоту юбки поддона и сверху у паза борт остаётся ровным. Буква по борту станет шире на два вылета.'
       + (P.decoType === 'zigzag' && Math.round(P.decoN) === 2 ? ' Два зубца — линия «М» сбоку.' : ''); }
   $('seedLbl').textContent = 'Вариант узора · ' + P.patSeed;
-  $('acrOn').checked = P.faceMode === 'acrylic';
   $('pvcOn').checked = P.backMode === 'pvc';
   drawAcrCorner(); drawSnap();
   document.querySelectorAll('[data-acrd]').forEach(b => b.setAttribute('aria-pressed', String(Math.abs(+b.dataset.acrd - P.acrD) < 1e-6)));
@@ -13506,24 +13442,7 @@ function drawSnap(){
   svg += `<text x="${xL}" y="230" class="dm">длина ${fmt(P.snapLen)} мм, шаг ~${fmt(P.snapStep, 0)} мм</text>`;
   box.innerHTML = `<svg viewBox="0 0 340 ${Math.max(242, Math.ceil(Y(z0) + 10))}" role="img" aria-label="Узел защёлки в разрезе">${svg}</svg>`;
 }
-function drawAcrCorner(){
-  const box = $('acrCorner'); if (!box || P.faceMode !== 'acrylic') return;
-  const R = Math.max(7, Math.min(40, P.acrD / 2 * 8)), cx = 110, cy = 72, cw = slotColor(P.matWall);
-  const acr = `M10 10H${cx}V${cy - R}A${R} ${R} 0 0 0 ${cx + R} ${cy}H200V140H10Z`;
-  const wall = `M${cx} 10H200V${cy}H${cx + R}A${R} ${R} 0 0 1 ${cx} ${cy - R}Z`;
-  const tx = cx + R - R * 0.707, ty = cy - R + R * 0.707;
-  box.innerHTML = `<svg viewBox="0 0 330 150" role="img" aria-label="Скругление внутреннего угла под фрезу">
-    <defs><pattern id="hhc" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="${cw}" fill-opacity=".18"/><line x1="0" y1="0" x2="0" y2="6" stroke="${cw}" stroke-width="1.6"/></pattern></defs>
-    <path d="${acr}" fill="#dfe9f2" fill-opacity=".85"/>
-    <path d="${wall}" fill="url(#hhc)" stroke="${cw}" stroke-width="1.5"/>
-    <circle cx="${cx + R}" cy="${cy - R}" r="${R}" fill="none" stroke="var(--accent)" stroke-width="1.4" stroke-dasharray="4 3"/>
-    <line x1="${cx + R}" y1="${cy - R}" x2="${tx}" y2="${ty}" stroke="var(--accent)" stroke-width="1.2"/>
-    <line x1="208" y1="30" x2="186" y2="30" stroke="${cw}" stroke-width=".9"/><text x="212" y="34" style="fill:${cw};font-weight:700">борт, паз</text>
-    <line x1="208" y1="62" x2="${cx + R + R * 0.6}" y2="${cy - R - R * 0.6}" stroke="var(--accent)" stroke-width=".9"/><text x="212" y="66" style="fill:var(--accent);font-weight:700">фреза ⌀${fmt(P.acrD, 3)}</text>
-    <line x1="208" y1="88" x2="${tx}" y2="${ty}" stroke="var(--accent)" stroke-width=".9"/><text x="212" y="92" style="fill:var(--accent)">скругление R ${fmt(P.acrD / 2)}</text>
-    <line x1="208" y1="122" x2="160" y2="110" stroke="#dfe9f2" stroke-width=".9"/><text x="212" y="126" style="fill:#dfe9f2;font-weight:700">акрил</text>
-  </svg>`;
-}
+function drawAcrCorner(){}
 function drawAcr(){ drawCncView('acrylic', 'acrView', 'acrNote', '#dfe9f2'); drawCncView('pvc', 'pvcView', 'pvcNote', '#d6d9dc'); }
 function drawCncView(kind, boxId, noteId, col){
   const box = $(boxId), note = $(noteId); if (!box) return;
@@ -13710,12 +13629,6 @@ function bindUI(){
     if (e.target.checked){ if (P.backMode !== 'pvc') lastBack = P.backMode; P.backMode = 'pvc'; }
     else P.backMode = lastBack === 'pvc' ? 'tray' : lastBack;
     syncInputs(); onParam('backMode');
-  });
-  let lastFace = P.faceMode === 'acrylic' ? 'separate' : P.faceMode;
-  $('acrOn').addEventListener('change', e => {
-    if (e.target.checked){ if (P.faceMode !== 'acrylic') lastFace = P.faceMode; P.faceMode = 'acrylic'; }
-    else P.faceMode = lastFace === 'acrylic' ? 'separate' : lastFace;
-    syncInputs(); onParam('faceMode');
   });
   document.querySelectorAll('[data-acrd]').forEach(b => b.addEventListener('click', () => { P.acrD = +b.dataset.acrd; syncInputs(); onParam('acrD'); }));
 
