@@ -142,6 +142,10 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
     <main class="stage">
       <div class="viewer" id="viewer">
         <div class="hud" id="hud"><span class="hchip">Загрузка 3D…</span></div>
+        <div class="vt">
+          <button type="button" id="vAsm" aria-pressed="true">В сборе</button>
+          <button type="button" id="vExplode" aria-pressed="false">Разнести детали</button>
+        </div>
       </div>
       <div class="out">
         <dl class="stats" id="stats"></dl>
@@ -12777,6 +12781,9 @@ function bindUI(){
   bindDrop('dropFile', 'fileSrc', loadFile);
   bindDrop('dropProf', 'fileProf', loadProfile);
   bindDrop('dropFont', 'fileFont', loadFont, true);
+  const setExp = x => { explode = x; .setAttribute('aria-pressed', String(!x)); .setAttribute('aria-pressed', String(x)); renderResult(false); };
+  .addEventListener('click', () => setExp(false));
+  .addEventListener('click', () => setExp(true));
   $('btn3mf').addEventListener('click', () => download('3mf'));
   $('btnStl').addEventListener('click', () => download('stl'));
   $('btnAll').addEventListener('click', () => download('all'));
