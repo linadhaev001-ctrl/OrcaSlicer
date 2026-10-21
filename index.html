@@ -12138,11 +12138,12 @@ function stripeOf(p, H, zBot, zTop, flip, msgs){
 
 /* ================= сборка модели ================= */
 // рельеф наружной стороны борта: «кожа» вокруг контура с высотой по узору (пупырышки, шипы, пирамидки, ямки)
-function reliefSkin(A, p, z0, z1){
+function reliefSkin(A, p, z0, z1, za, zb){
+  if (za === undefined){ za = z0; zb = z1; }
   const h = p.relH, pitch = p.relPitch, type = p.relType, e = 0.4;
   const stag = type !== 'pyramids';
   const nRows = Math.max(1, Math.round((z1 - z0) / (stag ? pitch * 0.866 : pitch))), pz = (z1 - z0) / nRows;
-  const sub = 6, K = nRows * sub, dzs = (z1 - z0) / K;
+  const sub = 6, K = Math.max(1, Math.round((zb - za) / (pz / sub))), dzs = (zb - za) / K;
   const area = pth => { let s = 0; for (let i = 0; i < pth.length; i++){ const a = pth[i], b = pth[(i + 1) % pth.length]; s += a.X * b.Y - b.X * a.Y; } return s / 2; };
   const sA0 = Math.sign(area(A[0]));
   const pos = [], tri = [];
@@ -12197,7 +12198,7 @@ function reliefSkin(A, p, z0, z1){
     for (let c = 0; c < nc; c++){
       const q = cols[c];
       for (let k = 0; k <= K; k++){
-        const z = k === K ? z1 : z0 + k * dzs, f = disp(q.u, z);
+        const z = k === K ? zb : za + k * dzs, f = disp(q.u, z);
         pos.push(q.x + q.nx * f, q.y + q.ny * f, z);       // наружная (индекс 2*(c*(K+1)+k))
         pos.push(q.x - q.nx * e, q.y - q.ny * e, z);       // внутренняя
       }
@@ -12289,7 +12290,11 @@ function buildAll(p){
       const inStripe = stripe && bd.a >= stripe.z1 - 1e-6 && bd.b <= stripe.z2 + 1e-6;
       body.layers.push({ex, a: bd.a, b: bd.b, role: inStripe ? 'stripe' : 'wall', mat: inStripe ? p.matStripe : p.matWall});
     }
-    if (relOn){ const rg = reliefSkin(A, p, zLo, zHi); if (rg){ body.layers.push({g: rg, ex: [], a: zLo, b: zHi, role: 'wall', mat: p.matWall}); body.pad = p.relH; } }
+    if (relOn){
+      const cl = z => Math.min(Math.max(z, zLo), zHi), segs = stripe ? [[zLo, cl(stripe.z1), false], [cl(stripe.z1), cl(stripe.z2), true], [cl(stripe.z2), zHi, false]] : [[zLo, zHi, false]];
+      for (const [za, zb, st] of segs){ if (zb - za < 1e-6) continue; const rg = reliefSkin(A, p, zLo, zHi, za, zb); if (rg) body.layers.push({g: rg, ex: [], a: za, b: zb, role: st ? 'stripe' : 'wall', mat: st ? p.matStripe : p.matWall}); }
+      body.pad = p.relH;
+    }
     const rIn = rMax(pts, (zBot + zTop) / 2);
     if (rIn != null && !off(rIn).length) emptyInside = true;
     if (bm === 'integral'){
