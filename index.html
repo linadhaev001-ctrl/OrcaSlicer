@@ -135,6 +135,10 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
 .tile{all:unset;box-sizing:border-box;text-align:center;padding:8px 4px;border:1.5px solid var(--line);border-radius:9px;background:var(--soft);font-size:13px;cursor:pointer}
 .tile[aria-pressed="true"]{border-color:var(--accent-line);background:var(--accent-soft);color:var(--accent);font-weight:600}
 .tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tiles.t4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.tile .ic{display:block;margin:0 auto 4px;width:34px;height:44px}
+.tile .ic .w{fill:currentColor;fill-opacity:.35;stroke:currentColor;stroke-width:1.4;stroke-linejoin:round}
+.tile .ic .base{stroke:currentColor;stroke-opacity:.45;stroke-dasharray:2 2}
 .patrow{display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;align-items:start}
 .sample svg{width:100%;height:auto;display:block}
 .sample svg text{font:11px var(--f-body);fill:var(--muted)}
@@ -235,7 +239,7 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
           <div class="mat" data-vis="face"><span class="ml">Пластик лица</span><div class="chips" data-chips="matFace"></div></div>
           <div class="sub" data-vis="notAcr">Профиль борта</div>
           <label class="f" data-vis="notAcr"><span>Тип борта</span>
-            <select class="in" id="wallType" data-k="wallType"><option value="standard">Стандартный, с пазом</option><option value="ledge">С выступом под лицо</option><option value="custom">Свой профиль из файла</option></select></label>
+            <select class="in" id="wallType" data-k="wallType"><option value="standard">Стандартный, с пазом</option><option value="ledge">С выступом под лицо</option></select></label>
           <p class="hint" data-vis="acr">Паз под акрил и полка задаются в блоке «Резка на ЧПУ: акрил и ПВХ».</p>
           <p class="hint" data-vis="grooveOff">Паз не нужен: лицо печатается заодно с бортом.</p>
           <div class="g2" data-vis="grooveOn">
@@ -245,7 +249,6 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
             <label class="f" data-vis="ledge"><span>α Угол скоса, °</span><input class="in" id="alpha" data-k="alpha" inputmode="decimal"></label>
             <label class="f" data-vis="faceSep"><span>Зазор лица</span><input class="in" id="gapFace" data-k="gapFace" inputmode="decimal"></label>
           </div>
-          <label class="drop" id="dropProf" data-vis="custom"><span class="dt"><b>Боковой профиль</b><small id="profInfo">SVG или DXF с одним замкнутым контуром. Снаружи — слева, низ — внизу, размеры в мм.</small></span><span class="pill">Выбрать</span><input type="file" id="fileProf" accept=".svg,.dxf,image/svg+xml"></label>
         </div>
       </details>
 
@@ -328,8 +331,17 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
       </details>
 
       <details class="blk" id="blkRel">
-        <summary><span class="dot" id="dotRel"></span><span class="bt"><b>Рельеф борта</b><small id="sRel"></small></span><span class="chev"></span></summary>
+        <summary><span class="dot" id="dotRel"></span><span class="bt"><b>Форма и рельеф борта</b><small id="sRel"></small></span><span class="chev"></span></summary>
         <div class="bb">
+          <div class="sub" style="margin-top:0">Форма борта снаружи</div>
+          <div class="tiles t4" id="decoTiles"></div>
+          <div class="g3" data-vis="deco">
+            <label class="f"><span>Вылет наружу, мм</span><input class="in" id="decoE" data-k="decoE" inputmode="decimal"></label>
+            <label class="f" data-vis="decoN"><span id="decoNLbl">Сколько, шт</span><input class="in" id="decoN" data-k="decoN" inputmode="decimal" data-step="1"></label>
+            <label class="f"><span>Ровно у краёв, мм</span><input class="in" id="decoPad" data-k="decoPad" inputmode="decimal"></label>
+          </div>
+          <p class="hint" id="decoNote" data-vis="deco"></p>
+          <div class="sub">Рельеф</div>
           <label class="f wide"><span>Рельеф снаружи борта</span><select class="in" id="relType" data-k="relType"><option value="none">Без рельефа</option><option value="studs">Пупырышки (полусферы)</option><option value="cones">Шипы (конусы)</option><option value="pyramids">Пирамидки</option><option value="dimples">Ямки (соты)</option></select></label>
           <div class="g2" data-vis="rel">
             <label class="f"><span>Высота рельефа, мм</span><input class="in" id="relH" data-k="relH" inputmode="decimal"></label>
@@ -11732,6 +11744,7 @@ const DEF = {
   faceMode: 'integral', faceJoin: 'groove', acrT: 3, acrC: 3, acrG: 0.8, acrGap: 0.2, acrD: 3.175, acrShelf: 2, lapW: 0.8, lapH: 4, tFace: 1.2, gapFace: 0.15, matFace: 2,
   backMode: 'tray', trayStyle: 'skirt', tBack: 2, lipH: 10, lipW: 1.5, fillet: 2, gapTray: 0.2, matBack: 1,
   relType: 'none', relH: 1.2, relPitch: 6, relMargin: 1,
+  decoType: 'none', decoE: 3, decoN: 2, decoPad: 0,
   patOn: 'face', patMode: 'through', pattern: 'solid', patSize: 12, patRib: 1.2, patFrame: 2, patSeed: 0, matPat: 3,
   c1: '#e2271c', c2: '#f4f2ec', c3: '#26282c', c4: '#f2b632'
 };
@@ -11740,6 +11753,7 @@ const P = Object.assign({}, DEF);
 try { const s = JSON.parse(localStorage.getItem(LS) || 'null'); if (s && typeof s === 'object') for (const k in DEF) if (k in s && typeof s[k] === typeof DEF[k]) P[k] = s[k]; } catch (e) {}
 if (P.src === 'file') P.src = 'text'; // файл не сохраняется между заходами
 if (!FONT_DATA[P.font]) P.font = DEF.font;
+if (P.wallType === 'custom') P.wallType = 'standard';   // свой профиль из файла убран из меню
 const save = () => { try { localStorage.setItem(LS, JSON.stringify(P)); } catch (e) {} };
 
 let fileName = 'vyveska', parts = [], selected = new Set(), fileBox = null, profile = null, result = null, dlMode = false;
@@ -12096,6 +12110,69 @@ function profileOf(p, msgs){
   pts.push({r: 0, z: A});
   return {pts, H: A, W: B + p.E, kind: 'ledge'};
 }
+// ===== фигурный борт: наружная сторона выгибается наружу (бочка, волна, зигзаг…), внутренняя остаётся ровной =====
+const DECO = {none: 'Ровный', barrel: 'Бочка', pillows: 'Подушки', wave: 'Волна', zigzag: 'Зигзаг «М»', ribs: 'Рёбра', shingle: 'Черепица'};
+// точки наружной линии по высоте зоны [z1, z2]: [{z, d}] снизу вверх, d — вылет наружу, мм; up — борт печатается лицом вверх
+function decoLine(type, z1, z2, N, e, up, step){
+  step = step || 0.1;
+  const Z = z2 - z1, out = [];
+  const add = (z, d) => { const l = out[out.length - 1]; if (!l || Math.abs(l.z - z) > 1e-7 || Math.abs(l.d - d) > 1e-7) out.push({z, d}); };
+  if (type === 'barrel' || type === 'pillows' || type === 'wave'){
+    const f = u => type === 'barrel' ? e * Math.sin(Math.PI * u) : type === 'pillows' ? e * Math.abs(Math.sin(Math.PI * N * u)) : e * (1 - Math.cos(2 * Math.PI * N * u)) / 2;
+    // частая выборка, потом прореживание: шаг по вылету ≤ step или по высоте ≤ 2 мм; вершины и впадины сохраняем
+    const M = Math.max(64, Math.ceil(Z / 0.05)), us = [];
+    for (let i = 0; i <= M; i++) us.push(i / M);
+    const nk = type === 'barrel' ? 1 : type === 'pillows' ? N : 2 * N;
+    for (let k = 1; k < nk * 2; k++) us.push(k / (nk * 2));
+    us.sort((a, b) => a - b);
+    let last = null;
+    for (let i = 0; i < us.length; i++){
+      const u = us[i], d = i === 0 || i === us.length - 1 ? 0 : f(u), z = z1 + u * Z;
+      const extreme = Math.abs(Math.round(u * nk * 2) - u * nk * 2) < 1e-9;
+      if (!last || i === us.length - 1 || extreme || Math.abs(d - last.d) >= step || z - last.z >= 2){ add(z, d); last = {z, d}; }
+    }
+  } else if (type === 'zigzag'){
+    for (let k = 0; k <= 2 * N; k++) add(z1 + Z * k / (2 * N), k % 2 ? e : 0);
+  } else if (type === 'ribs'){
+    const L = Z / N, b = 0.7 * L, c = Math.min(e, b * 0.4), top = b - 2 * c;
+    add(z1, 0);
+    for (let k = 0; k < N; k++){ const s0 = z1 + k * L + (L - b) / 2; add(s0, 0); add(s0 + c, e); add(s0 + c + top, e); add(s0 + b, 0); }
+    add(z2, 0);
+  } else if (type === 'shingle'){
+    // скат черепицы развёрнут под печать: каждый ряд расширяется вверх по ходу печати, сверху ряда — ровная полочка
+    const L = Z / N;
+    for (let k = 0; k < N; k++){
+      const za = z1 + k * L, zb = za + L;
+      if (up){ add(za, 0); add(zb, e); add(zb, 0); }
+      else { add(za, 0); add(za, e); add(zb, 0); }
+    }
+  }
+  return out;
+}
+// профиль борта с фигурной наружной стороной; null — борт ровный
+function decoProfile(p, prof, zBot, zTop, flip, msgs){
+  const t = p.decoType;
+  if (!t || t === 'none' || !DECO[t]) return null;
+  const warn = m => msgs.push({t: 'warn', m}), err = m => msgs.push({t: 'err', m});
+  if (prof.kind === 'custom'){ warn('Фигурный борт не делается со своим профилем из файла — форма задаётся самим файлом.'); return null; }
+  const e = p.decoE, N = Math.max(1, Math.round(p.decoN || 1)), pad = Math.max(0, p.decoPad || 0);
+  if (!(e >= 0.3)){ err('Фигурный борт: вылет наружу — не меньше 0,3 мм.'); return null; }
+  if (e > 30){ err('Фигурный борт: вылет больше 30 мм — слишком много.'); return null; }
+  const pts = prof.pts, n = pts.length, last = pts[n - 1];
+  if (!(Math.abs(pts[0].r) < 1e-9 && Math.abs(pts[0].z) < 1e-9 && Math.abs(last.r) < 1e-9)) return null;
+  const z1 = zBot + pad, z2 = Math.min(last.z, zTop) - pad, Z = z2 - z1;
+  if (Z < 4){ warn('Фигурный борт не поместился по высоте — уменьшите отступ у краёв.'); return null; }
+  if (t !== 'barrel' && Z / N < 2){ warn(`Фигурный борт: ${N} шт. на ${fmt(Z)} мм — слишком часто, уменьшите количество.`); return null; }
+  const line = decoLine(t, z1, z2, t === 'barrel' ? 1 : N, e, !flip, p.__fine ? 0.15 : 0.25);
+  let s = 0;
+  for (let i = 1; i < line.length; i++){ const dz = line[i].z - line[i - 1].z; if (dz > 1e-7) s = Math.max(s, Math.abs(line[i].d - line[i - 1].d) / dz); }
+  if (s > 1.0001) warn(`${DECO[t]}: скат ${fmt(Math.atan(s) * 180 / Math.PI, 0)}° от вертикали — круче 45°, под него понадобятся поддержки. Уменьшите вылет${t === 'barrel' ? '' : ' или количество'}.`);
+  const out = pts.slice();
+  if (z2 < last.z - 1e-7) out.push({r: 0, z: z2});
+  for (let i = line.length - 1; i >= 0; i--){ const q = {r: -line[i].d, z: line[i].z}, l = out[out.length - 1]; if (Math.abs(l.r - q.r) > 1e-7 || Math.abs(l.z - q.z) > 1e-7) out.push(q); }
+  if (out[out.length - 1].z > 1e-7 && Math.abs(out[out.length - 1].r) > 1e-7) out.push({r: 0, z: z1});
+  return {pts: out, out: Math.max(...line.map(q => q.d)), type: t, N, e, z1, z2, s, line};
+}
 function scan(pts, z){
   const xs = [], n = pts.length;
   for (let i = 0; i < n; i++){
@@ -12104,7 +12181,7 @@ function scan(pts, z){
   }
   xs.sort((u, v) => u - v);
   const iv = [];
-  for (let i = 0; i + 1 < xs.length; i += 2) if (xs[i + 1] - xs[i] > 1e-6) iv.push([Math.max(0, xs[i]), xs[i + 1]]);
+  for (let i = 0; i + 1 < xs.length; i += 2) if (xs[i + 1] - xs[i] > 1e-6) iv.push([xs[i], xs[i + 1]]);
   return iv;
 }
 const rMin = (pts, z) => { const iv = scan(pts, z); return iv.length ? iv[0][0] : null; };
@@ -12117,16 +12194,25 @@ function grooveOf(p, prof){
   return null;
 }
 // разбивка борта по высоте на пояса с одинаковым сечением
-function bandList(pts, z0, z1, extra){
+function bandList(pts, z0, z1, extra, step){
+  step = step || 0.12;
   const br = new Set([z0, z1]);
   for (const q of pts) if (q.z > z0 + 1e-6 && q.z < z1 - 1e-6) br.add(q.z);
   for (const z of extra) if (z > z0 + 1e-6 && z < z1 - 1e-6) br.add(z);
   const zs = [...br].sort((a, b) => a - b), n = pts.length, raw = [];
   for (let i = 0; i + 1 < zs.length; i++){
     const a = zs[i], b = zs[i + 1]; if (b - a < 1e-6) continue;
-    let sloped = false;
-    for (let j = 0; j < n && !sloped; j++){ const u = pts[j], w = pts[(j + 1) % n]; sloped = Math.abs(u.r - w.r) > 1e-9 && Math.abs(u.z - w.z) > 1e-9 && Math.min(u.z, w.z) < b - 1e-9 && Math.max(u.z, w.z) > a + 1e-9; }
-    const m = sloped ? Math.max(1, Math.ceil((b - a) / 0.15)) : 1;
+    let sloped = false, dr = 0;
+    for (let j = 0; j < n; j++){
+      const u = pts[j], w = pts[(j + 1) % n];
+      if (Math.abs(u.r - w.r) > 1e-9 && Math.abs(u.z - w.z) > 1e-9 && Math.min(u.z, w.z) < b - 1e-9 && Math.max(u.z, w.z) > a + 1e-9){
+        sloped = true;
+        const lo = Math.max(a, Math.min(u.z, w.z)), hi = Math.min(b, Math.max(u.z, w.z));
+        dr = Math.max(dr, Math.abs((w.r - u.r) / (w.z - u.z)) * (hi - lo));
+      }
+    }
+    // наклонные участки режем на пояса: шаг по радиусу ≤ step (в файлах 0,15 мм — мельче слоя печати, слайсер его не видит)
+    const m = sloped ? Math.max(1, Math.round(dr / step), Math.ceil((b - a) / 2 - 1e-9)) : 1;
     for (let k = 0; k < m; k++){ const za = a + (b - a) * k / m, zb = a + (b - a) * (k + 1) / m; raw.push({a: za, b: zb, iv: scan(pts, (za + zb) / 2)}); }
   }
   const out = [];
@@ -12343,7 +12429,8 @@ function* buildGen(p){
   if (!sel.length){ err('Не выбрано ни одного контура.'); return {msgs}; }
   if (!(p.scaleW >= 5)){ err('Ширина надписи должна быть не меньше 5 мм.'); return {msgs}; }
   const prof = profileOf(p, msgs); if (!prof || hasErr()) return {msgs};
-  const H = prof.H, pts = prof.pts, fm = p.faceMode, bm = p.backMode;
+  let pts = prof.pts;
+  const H = prof.H, fm = p.faceMode, bm = p.backMode;
   if (fm === 'integral' && bm === 'integral') err('Лицо и задник заодно с бортом дают закрытую коробку — её не напечатать. Сделайте одну из панелей отдельной деталью.');
   if (fm !== 'none' && p.tFace < 0.4) err('Лицо тоньше 0,4 мм не напечатается.');
   if (bm !== 'none' && p.tBack < 0.4) err('Задник тоньше 0,4 мм не напечатается.');
@@ -12356,6 +12443,8 @@ function* buildGen(p){
   if (fm === 'separate' && prof.kind !== 'lap' && (!g || g.depth <= 0)) err('Для отдельного лица нужен паз: задайте C больше нуля или выберите «Заодно с бортом».');
   const zBot = bm === 'integral' ? p.tBack : 0, zTop = fm === 'integral' ? H - p.tFace : H;
   if (zTop - zBot < 1) err('Панели толще самого борта — уменьшите толщину лица или задника.');
+  const deco = hasErr() ? null : decoProfile(p, prof, zBot, zTop, fm === 'integral', msgs);
+  if (deco) pts = deco.pts;
   const lipOn = p.lipH > 0 && p.lipW > 0;
   if (bm === 'tray' && p.trayStyle !== 'skirt' && p.tBack + (lipOn ? p.lipH : 0) > (g ? g.seat : zTop) - 0.5) err('Поддон с бортиком выше места под лицо — уменьшите бортик.');
   if (bm === 'tray' && lipOn && p.lipW < 0.4) err('Бортик поддона тоньше 0,4 мм не напечатается.');
@@ -12380,10 +12469,11 @@ function* buildGen(p){
   }
   let relOn = p.relType !== 'none';
   if (relOn && p.wallType === 'custom'){ warn('Рельеф борта работает только со стандартным и ступенчатым бортом.'); relOn = false; }
+  if (relOn && deco){ warn('Рельеф и фигурный борт вместе не делаются — рельеф выключен. Выберите что-то одно.'); relOn = false; }
   if (relOn && !(p.relH >= 0.4 && p.relPitch >= 2.5 && p.relMargin >= 0)){ err('Рельеф: высота не меньше 0,4 мм, шаг не меньше 2,5 мм.'); return {msgs}; }
   const zLo = zBot + p.relMargin + (skirt ? pkTop : 0), zHi = zTop - (prof.kind === 'lap' ? p.lapH : 0) - p.relMargin;
   if (relOn && zHi - zLo < p.relPitch * 0.8){ warn('Рельеф не поместился по высоте борта — уменьшите шаг или отступ.'); relOn = false; }
-  const bands = bandList(pts, zBot, zTop, (stripe ? [stripe.z1, stripe.z2] : []).concat(skirt ? [pkTop] : []));
+  const bands = bandList(pts, zBot, zTop, (stripe ? [stripe.z1, stripe.z2] : []).concat(skirt ? [pkTop] : []), p.__fine ? 0.15 : 0.25);
   const k = scaleK(), letters = [];
   if (letterCacheOn){ const gk = geomKey(p) + '|' + k; if (gk !== letterCacheKey || letterCache.size > 400){ letterCache.clear(); letterCacheKey = gk; } }
   let cellsTotal = 0, bigOnes = 0, emptyInside = false, acrNotches = 0;
@@ -12405,7 +12495,7 @@ function* buildGen(p){
     const m0 = msgs.length, c0 = cellsTotal, e0 = emptyInside;
     const cache = new Map();
     let acrPocket = null;
-    const off = r => { if (r < 1e-6) return A; const key = r.toFixed(4); if (!cache.has(key)) cache.set(key, offset(A, -r, p.corner)); return cache.get(key); };
+    const off = r => { if (Math.abs(r) < 1e-6) return A; const key = r.toFixed(4); if (!cache.has(key)) cache.set(key, offset(A, -r, p.corner)); return cache.get(key); };
     const ring = iv => { let ps = []; for (const [r1, r2] of iv) ps = ps.concat(clip(CT.ctDifference, off(r1), off(r2))); return toEx(ps); };
     // паз под акрил: внутренние углы скруглены под фрезу, но у наружного контура борта всегда остаётся целая стенка
     // (в острых углах полное скругление прорезало бы борт насквозь)
@@ -12523,8 +12613,8 @@ function* buildGen(p){
   if (acrNotches) warn(`В ${acrNotches} ${plural(acrNotches, ['остром углу', 'острых углах', 'острых углах'])} фреза ⌀${fmt(p.acrD, 3)} не проходит — там в акриле сделан вырез по фрезе, а борт заходит в него — стенка без дыр. Чтобы вырезов не было, возьмите фрезу тоньше или стенку толще.`);
   if (emptyInside) warn('Борт заполнил букву целиком — внутри нет полости. Уменьшите толщину борта или увеличьте размер.');
   if (bigOnes) warn(`${bigOnes} ${plural(bigOnes, ['буква больше', 'буквы больше', 'букв больше'])} стола ${fmt(p.bed, 0)} мм — такие буквы придётся резать на части.`);
-  const W = (allBB.x1 - allBB.x0) / S, Hh = (allBB.y1 - allBB.y0) / S;
-  const R = {p: Object.assign({}, p), msgs, letters, H, W, Hh, stripe, cellsTotal, flipBody,
+  const dOut = deco ? 2 * deco.out : 0, W = (allBB.x1 - allBB.x0) / S + dOut, Hh = (allBB.y1 - allBB.y0) / S + dOut;
+  const R = {p: Object.assign({}, p), msgs, letters, H, W, Hh, stripe, cellsTotal, flipBody, deco: deco ? {type: deco.type, out: deco.out} : null,
     face: fm, back: bm, depth: Math.max(H, g ? g.seat + (fm === 'acrylic' ? p.acrT : p.tFace) : 0, prof.kind === 'lap' ? H + p.tFace : 0) + (bm === 'pvc' ? p.tBack : 0)};
   R.pieces = letters.reduce((s, L) => s + L.pieces.filter(pc => !pc.noPrint).length, 0);
   packPieces(R);
@@ -12701,7 +12791,7 @@ async function download(kind){
   const btns = ['btn3mf', 'btnStl', 'btnAll'].map($); btns.forEach(b => b.disabled = true);
   const keep = result; let fine = null;
   try {
-    if (result.p.relType !== 'none' && !result.p.__fine){
+    if ((result.p.relType !== 'none' || result.deco) && !result.p.__fine){
       dlBusy = true; setBusy(true);
       fine = await runBuild({__fine: true}, 'Готовлю файлы');
       hideProgress(); setBusy(false); dlBusy = false;
@@ -12816,10 +12906,12 @@ function renderResult(fit){
 /* ================= схема борта и образец узора ================= */
 function drawDiagram(){
   const box = $('diagram'); if (!box) return;
-  const msgs = [], prof = profileOf(P, msgs), Wv = 340, Hv = 452;
+  const msgs = [], prof = profileOf(P, msgs), Wv = 340, Hv = 470;
   if (!prof){ box.innerHTML = `<svg viewBox="0 0 ${Wv} ${Hv}" role="img" aria-label="Схема борта"><text x="170" y="180" text-anchor="middle" class="dm">${P.wallType === 'custom' ? 'Загрузите файл профиля' : 'Проверьте размеры борта'}</text></svg>`; return; }
   const H = prof.H, maxR = Math.max(...prof.pts.map(q => q.r));
   const fm = P.faceMode, bm = P.backMode, tray = bm === 'tray';
+  const deco = decoProfile(P, prof, bm === 'integral' ? P.tBack : 0, fm === 'integral' ? H - P.tFace : H, fm === 'integral', []);
+  const dpts = deco ? deco.pts : prof.pts, minR = deco ? -deco.out : 0;
   const g = fm === 'separate' || fm === 'acrylic' ? grooveOf(P, prof) : null;
   const faceT = fm === 'acrylic' ? P.acrT : P.tFace;
   const lipOn = tray && P.lipH > 0 && P.lipW > 0, skirtSt = tray && P.trayStyle === 'skirt';
@@ -12830,10 +12922,10 @@ function drawDiagram(){
   const Htot = Math.max(H + zoff, g ? zoff + g.seat + faceT : 0, lapK ? H + zoff + P.tFace : 0);
   const k = 225 / Htot;
   const trayR = tray ? (skirtSt ? riW + P.gapTray + (lipOn ? P.lipW : 0) + 0.5 : riW + P.gapTray + (lipOn ? P.lipW : 0) + 0.5) : 0;
-  const kx = Math.max(k, Math.min(28, 80 / Math.max(maxR, trayR, 2.5)));
-  const x0 = 100, y0 = 290, xFar = 296, X = r => x0 + r * kx, Y = z => y0 - z * k;
+  const kx = Math.max(k, Math.min(28, 80 / Math.max(maxR - minR, trayR - minR, 2.5)));
+  const x0 = 100 - minR * kx, y0 = 290, xFar = 296, X = r => x0 + r * kx, Y = z => y0 - z * k;
   const cw = slotColor(P.matWall), cf = slotColor(P.matFace), cb = slotColor(P.matBack);
-  const wallPts = (notch ? [{r: 0, z: 0}, {r: pkR1, z: 0}, {r: pkR1, z: pkTop}, {r: riW, z: pkTop}, ...prof.pts.slice(2)] : prof.pts).map(q => ({r: q.r, z: q.z + zoff}));
+  const wallPts = dpts.map(q => ({r: q.r, z: q.z + zoff}));
   const poly = wallPts.map(q => X(q.r).toFixed(1) + ',' + Y(q.z).toFixed(1)).join(' ');
   let s = `<defs><pattern id="hh" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="${cw}" fill-opacity=".18"/><line x1="0" y1="0" x2="0" y2="6" stroke="${cw}" stroke-width="1.6"/></pattern>
   <clipPath id="wc"><polygon points="${poly}"/></clipPath></defs>`;
@@ -12841,7 +12933,7 @@ function drawDiagram(){
   if (P.stripeOn){
     const zBot = bm === 'integral' ? P.tBack : 0, zTop = fm === 'integral' ? H - P.tFace : H, len = zTop - zBot;
     const fs = String(P.stripeFrom).trim().replace(',', '.'), from = fs === '' ? (len - P.stripeH) / 2 : parseFloat(fs);
-    if (isFinite(from)) s += `<rect clip-path="url(#wc)" x="${X(0) - 2}" y="${Y(zoff + zBot + from + P.stripeH)}" width="${maxR * kx + 4}" height="${P.stripeH * k}" fill="${slotColor(P.matStripe)}"/>`;
+    if (isFinite(from)) s += `<rect clip-path="url(#wc)" x="${X(minR) - 2}" y="${Y(zoff + zBot + from + P.stripeH)}" width="${(maxR - minR) * kx + 4}" height="${P.stripeH * k}" fill="${slotColor(P.matStripe)}"/>`;
   }
   const zig = (x, y1, y2) => `<path d="M${x} ${y1 - 4}l6 ${(y2 - y1) / 2 + 4}l-6 ${(y2 - y1) / 2 + 4}" fill="none" stroke="var(--muted)" stroke-width="1"/>`;
   const rect = (r1, z1, r2, z2, col, dashed) => `<rect x="${X(r1)}" y="${Y(z2)}" width="${Math.max(1.5, (r2 - r1) * kx)}" height="${Math.max(2, (z2 - z1) * k)}" fill="${col}" fill-opacity=".9" stroke="var(--muted)" stroke-width="1" ${dashed ? 'stroke-dasharray="4 3"' : ''}/>`;
@@ -12897,13 +12989,19 @@ function drawDiagram(){
     yPrev = ty;
   }
   // --- размеры слева: A (высота борта) и общая высота
-  const xa = x0 - 30;
+  const xa = X(minR) - 30;
   s += vd(xa, zoff, zoff + H, 'var(--dimA)', x0) + Tr(xa - 7, (Y(zoff) + Y(zoff + H)) / 2, `A · ${fmt(H)} мм`, 'var(--dimA)');
-  if (zoff > 0){ const xb = x0 - 62; s += vd(xb, 0, Htot, 'var(--muted)', x0) + Tr(xb - 7, (Y(0) + Y(Htot)) / 2, `с задником ${fmt(Htot)} мм`, 'var(--muted)'); }
+  if (zoff > 0){ const xb = X(minR) - 62; s += vd(xb, 0, Htot, 'var(--muted)', x0) + Tr(xb - 7, (Y(0) + Y(Htot)) / 2, `с задником ${fmt(Htot)} мм`, 'var(--muted)'); }
   // --- размеры снизу
   const Bv = prof.kind === 'custom' ? maxR : P.B;
   s += hd(y0 + 18, 0, Bv, 'var(--dimB)') + T(X(0), y0 + 38, `B · ${fmt(Bv)} мм (толщина борта)`, 'var(--dimB)');
   let yb = y0 + 38;
+  if (deco){
+    yb += 22;
+    s += hd(yb, minR, 0, cS);
+    s += T(X(minR), yb + 20, `${DECO[deco.type]}${deco.type === 'barrel' ? '' : ' × ' + deco.N} · вылет ${fmt(deco.out)} мм наружу`, cS);
+    yb += 20;
+  }
   if (tray && lipOn){
     const a = skirtSt ? pkR1 : riW, gp = P.gapTray, w = P.lipW, base = skirtSt ? 0 : riW;
     yb += 22;
@@ -12929,9 +13027,16 @@ function drawDiagram(){
     s += T(xc + 7, Y(zoff + H - Cv) + 15, `C · ${fmt(Cv)} мм`, 'var(--dimC)');
   }
   if (prof.kind === 'ledge') s += T(X(P.B + P.E) + 8, Y(zoff + H - Math.max(0, P.C)) + 20, `E · ${fmt(P.E)} мм`, 'var(--dimE)') + T(X(P.B + P.E) + 8, Y(zoff + H - Math.max(0, P.C)) + 35, `α · ${fmt(P.alpha, 0)}°`, 'var(--dimE)');
-  s += `<text x="${X(0) - 4}" y="${Y(Htot) - 26}" text-anchor="end" class="dm">Снаружи</text><text x="${X(0) + 4}" y="${Y(Htot) - 26}" class="dm">Внутри →</text>`;
+  s += `<text x="${X(minR) - 4}" y="${Y(Htot) - 26}" text-anchor="end" class="dm">Снаружи</text><text x="${X(0) + 4}" y="${Y(Htot) - 26}" class="dm">Внутри →</text>`;
   if (kx > k * 1.4) s += `<text x="${Wv - 6}" y="${Hv - 8}" text-anchor="end" class="dm" style="font-size:9.5px">по горизонтали масштаб увеличен</text>`;
   box.innerHTML = `<svg viewBox="0 0 ${Wv} ${Hv}" role="img" aria-label="Схема борта, задника и лица в разрезе">${s}</svg>`;
+}
+// значок формы борта: разрез стенки, снаружи — слева
+function decoIcon(t){
+  const W = 34, H = 44, xi = 25, xo = 15, kz = 40, e = 8;
+  const line = t === 'none' ? [{z: 0, d: 0}, {z: 1, d: 0}] : decoLine(t, 0, 1, t === 'barrel' ? 1 : 2, 1, true);
+  const pts = [`${xi},${H - 2}`, `${xi},2`].concat(line.slice().reverse().map(q => `${(xo - q.d * e).toFixed(1)},${(H - 2 - q.z * kz).toFixed(1)}`));
+  return `<svg class="ic" viewBox="0 0 ${W} ${H}" aria-hidden="true"><line class="base" x1="${xo}" y1="1" x2="${xo}" y2="${H - 1}"/><polygon class="w" points="${pts.join(' ')}"/></svg>`;
 }
 function pathD(paths, flipH){ return paths.map(pth => 'M' + pth.map(q => (q.X / S).toFixed(2) + ' ' + (flipH - q.Y / S).toFixed(2)).join('L') + 'Z').join(''); }
 function drawSample(){
@@ -13005,7 +13110,7 @@ const VIS = {
   lap: () => P.faceMode === 'separate' && P.faceJoin === 'lap' && P.wallType !== 'custom', groove: () => !(P.faceMode === 'separate' && P.faceJoin === 'lap' && P.wallType !== 'custom'), faceSepStd: () => P.faceMode === 'separate' && P.wallType !== 'custom',
   standard: () => P.wallType === 'standard' && !(P.faceMode === 'separate' && P.faceJoin === 'lap'), ledge: () => P.wallType === 'ledge' && !(P.faceMode === 'separate' && P.faceJoin === 'lap'), custom: () => P.wallType === 'custom',
   grooveOn: () => P.wallType !== 'custom' && P.faceMode !== 'integral' && P.faceMode !== 'acrylic', grooveOff: () => P.wallType !== 'custom' && P.faceMode === 'integral',
-  rel: () => P.relType !== 'none', stripe: () => P.stripeOn, face: () => P.faceMode !== 'none' && P.faceMode !== 'acrylic', acr: () => P.faceMode === 'acrylic', notAcr: () => P.faceMode !== 'acrylic', pvc: () => P.backMode === 'pvc', cnc: () => P.faceMode === 'acrylic' || P.backMode === 'pvc', backPrint: () => P.backMode !== 'none' && P.backMode !== 'pvc', faceSep: () => P.faceMode === 'separate',
+  rel: () => P.relType !== 'none', deco: () => P.decoType !== 'none', decoN: () => P.decoType !== 'none' && P.decoType !== 'barrel', stripe: () => P.stripeOn, face: () => P.faceMode !== 'none' && P.faceMode !== 'acrylic', acr: () => P.faceMode === 'acrylic', notAcr: () => P.faceMode !== 'acrylic', pvc: () => P.backMode === 'pvc', cnc: () => P.faceMode === 'acrylic' || P.backMode === 'pvc', backPrint: () => P.backMode !== 'none' && P.backMode !== 'pvc', faceSep: () => P.faceMode === 'separate',
   back: () => P.backMode !== 'none', tray: () => P.backMode === 'tray',
   pat: () => P.pattern !== 'solid', voronoi: () => P.pattern === 'voronoi', inlay: () => P.pattern !== 'solid' && P.patMode === 'inlay'
 };
@@ -13056,7 +13161,9 @@ function summaries(){
   set('sTop', `${faceTxt} · борт ${P.wallType === 'custom' && profile ? fmt(profile.H) + ' мм, свой профиль' : fmt(P.A) + ' × ' + fmt(P.B) + ' мм'}`);
   set('sBack', {tray: `Поддон ${fmt(P.tBack)} мм, бортик ${fmt(P.lipH)} мм`, integral: `Заодно с бортом, ${fmt(P.tBack)} мм`, none: 'Без задника', pvc: `Лист ПВХ ${fmt(P.tBack)} мм — на ЧПУ`}[P.backMode]);
   set('sPat', P.pattern === 'solid' ? 'Без узора' : `${({hex: 'Соты', scales: 'Чешуя', petals: 'Лепестки', voronoi: 'Вороной'})[P.pattern]} ${fmt(P.patSize)} мм на ${P.patOn === 'face' ? 'лице' : 'заднике'}, ${P.patMode === 'inlay' ? 'вторым пластиком' : 'насквозь'}`);
-  set('sRel', P.relType === 'none' ? 'Выключен' : `${{studs: 'Пупырышки', cones: 'Шипы', pyramids: 'Пирамидки', dimples: 'Ямки'}[P.relType]}, ${fmt(P.relH)} мм, шаг ${fmt(P.relPitch)}`);
+  { const a = P.decoType !== 'none' ? `${DECO[P.decoType]}${P.decoType === 'barrel' ? '' : ' × ' + Math.max(1, Math.round(P.decoN))}, вылет ${fmt(P.decoE)} мм` : '';
+    const b = P.relType === 'none' ? '' : `рельеф: ${{studs: 'пупырышки', cones: 'шипы', pyramids: 'пирамидки', dimples: 'ямки'}[P.relType]}, ${fmt(P.relH)} мм, шаг ${fmt(P.relPitch)}`;
+    set('sRel', a && b ? a + ' · ' + b : a || (b ? b[0].toUpperCase() + b.slice(1) : 'Ровный, без рельефа')); }
   set('sStripe', P.stripeOn ? `${fmt(P.stripeH)} мм, пластик ${P.matStripe}` : 'Выключена');
   set('sPrint', `Стол ${fmt(P.bed, 0)} мм · слой ${fmt(P.layerH)} мм`);
   const dot = (id, i) => { const el = $(id); if (el) el.style.setProperty('--c', slotColor(i)); };
@@ -13071,6 +13178,10 @@ function refreshUI(){
   [...po.options].forEach(o => { o.disabled = o.value === 'face' ? (P.faceMode === 'none' || P.faceMode === 'acrylic') : P.backMode === 'none'; });
   if (po.selectedOptions[0] && po.selectedOptions[0].disabled){ const ok = [...po.options].find(o => !o.disabled); if (ok){ P.patOn = ok.value; po.value = ok.value; } }
   document.querySelectorAll('[data-pat]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pat === P.pattern)));
+  document.querySelectorAll('[data-deco]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.deco === P.decoType)));
+  { const lb = $('decoNLbl'); if (lb) lb.textContent = {pillows: 'Сколько подушек', wave: 'Сколько волн', zigzag: 'Сколько зубцов', ribs: 'Сколько рёбер', shingle: 'Сколько рядов'}[P.decoType] || 'Сколько, шт';
+    const nt = $('decoNote'); if (nt) nt.textContent = P.decoType === 'none' ? '' : 'Наружная сторона борта выгибается наружу, внутренняя остаётся ровной — паз, юбка, полка под акрил и замок не меняются. Буква по борту станет шире на два вылета. '
+      + (P.decoType === 'shingle' ? 'Ряды черепицы развёрнуты так, чтобы борт печатался без поддержек.' : P.decoType === 'zigzag' && Math.round(P.decoN) === 2 ? 'Два зубца — линия «М» сбоку.' : 'Скаты до 45° печатаются без поддержек.'); }
   $('seedLbl').textContent = 'Вариант узора · ' + P.patSeed;
   $('acrOn').checked = P.faceMode === 'acrylic';
   $('pvcOn').checked = P.backMode === 'pvc';
@@ -13403,8 +13514,14 @@ function bindUI(){
     onParam('src');
   }));
   document.querySelectorAll('[data-pat]').forEach(b => b.addEventListener('click', () => { P.pattern = b.dataset.pat; onParam('pattern'); }));
+  { const box = $('decoTiles');
+    if (box) for (const key in DECO){
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'tile'; b.dataset.deco = key;
+      b.innerHTML = decoIcon(key) + `<span>${DECO[key]}</span>`;
+      b.addEventListener('click', () => { P.decoType = key; onParam('decoType'); });
+      box.appendChild(b);
+    } }
   bindDrop('dropFile', 'fileSrc', loadFile);
-  bindDrop('dropProf', 'fileProf', loadProfile);
   bindDrop('dropFont', 'fileFont', loadFont, true);
   const setExp = x => { explode = x; $('vAsm').setAttribute('aria-pressed', String(!x)); $('vExplode').setAttribute('aria-pressed', String(x)); renderResult(true); };
   $('vAsm').addEventListener('click', () => setExp(false));
@@ -13431,7 +13548,7 @@ function bindUI(){
   downloadsApi().then(dl => { dlMode = !!dl; $('btnAll').hidden = !dlMode; $('btn3mf').hidden = dlMode; $('btnStl').hidden = dlMode; });
 }
 
-window.__bukvy = {P, DEF, rebuildSource, buildAll, build3mf, stlGroups, stl, dxfToItems, acrylicDxf, makeCells, loadFile, loadProfile, textItems,
+window.__bukvy = {P, DEF, rebuildSource, buildAll, drawDiagram, decoProfile, profileOf, bandList, DECO, build3mf, stlGroups, stl, dxfToItems, acrylicDxf, makeCells, loadFile, loadProfile, textItems,
   select: ids => { selected = new Set(ids); }, get parts(){ return parts; }, get result(){ return result; }, set result(r){ result = r; }, disposeResult};
 
 fillFonts();
