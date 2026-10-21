@@ -142,11 +142,6 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
     <main class="stage">
       <div class="viewer" id="viewer">
         <div class="hud" id="hud"><span class="hchip">Загрузка 3D…</span></div>
-        <div class="vt">
-          <button type="button" id="vPrint" aria-pressed="true">Как печатать</button>
-          <button type="button" id="vAsm" aria-pressed="false">В сборе</button>
-          <button type="button" id="vExplode" aria-pressed="true" hidden>Разнести детали</button>
-        </div>
       </div>
       <div class="out">
         <dl class="stats" id="stats"></dl>
@@ -12365,7 +12360,7 @@ async function download(kind){
 }
 
 /* ================= 3D ================= */
-let V = null, viewMode = 'print', explode = true;
+let V = null, viewMode = 'asm', explode = false;
 const matCache = {};
 function slotColor(i){ return P['c' + i] || '#888888'; }
 function matFor(i){
@@ -12785,10 +12780,7 @@ function bindUI(){
   $('btn3mf').addEventListener('click', () => download('3mf'));
   $('btnStl').addEventListener('click', () => download('stl'));
   $('btnAll').addEventListener('click', () => download('all'));
-  const setView = m => { viewMode = m; $('vPrint').setAttribute('aria-pressed', String(m === 'print')); $('vAsm').setAttribute('aria-pressed', String(m === 'asm')); $('vExplode').hidden = m !== 'asm'; renderResult(true); };
-  $('vPrint').addEventListener('click', () => setView('print'));
-  $('vAsm').addEventListener('click', () => setView('asm'));
-  $('vExplode').addEventListener('click', e => { explode = !explode; e.currentTarget.setAttribute('aria-pressed', String(explode)); renderResult(false); });
+
   downloadsApi().then(dl => { dlMode = !!dl; $('btnAll').hidden = !dlMode; $('btn3mf').hidden = dlMode; $('btnStl').hidden = dlMode; });
 }
 
