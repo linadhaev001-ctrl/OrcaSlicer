@@ -12401,15 +12401,17 @@ function renderResult(fit){
   v.group.clear();
   v.deco.children.forEach(o => { o.geometry && o.geometry.dispose(); });
   v.deco.clear();
-  const addPlate = (cx, cy, side) => {
-    const plate = new THREE.Mesh(new THREE.PlaneGeometry(side, side), new THREE.MeshBasicMaterial({color: 0x2b2f33}));
-    plate.position.set(cx, cy, -0.06); v.deco.add(plate);
-    const gr = new THREE.GridHelper(side, Math.max(1, Math.round(side / 10)), 0x474d55, 0x3a3f45); gr.rotation.x = Math.PI / 2; gr.position.set(cx, cy, -0.03); v.deco.add(gr);
+  const addFloor = (cx, cy, w, h) => {
+    const side = Math.max(600, Math.ceil((Math.max(w, h) + 300) / 100) * 100);
+    const fl = new THREE.Mesh(new THREE.PlaneGeometry(side, side), new THREE.MeshBasicMaterial({color: 0x2b2f33}));
+    fl.position.set(cx, cy, -0.06); v.deco.add(fl);
+    const g1 = new THREE.GridHelper(side, side / 10, 0x3a3f45, 0x3a3f45); g1.rotation.x = Math.PI / 2; g1.position.set(cx, cy, -0.04); v.deco.add(g1);
+    const g2 = new THREE.GridHelper(side, side / 100, 0x5d646d, 0x5d646d); g2.rotation.x = Math.PI / 2; g2.position.set(cx, cy, -0.02); v.deco.add(g2);
   };
   const hud = $('hud'), busy = $('busyChip');
   hud.innerHTML = ''; if (busy) hud.appendChild(busy);
   if (!result){
-    addPlate(P.bed / 2, P.bed / 2, P.bed);
+    addFloor(P.bed / 2, P.bed / 2, P.bed, P.bed);
     if (fit !== false){ const d = P.bed * 1.4; v.camera.position.set(P.bed / 2 - d * 0.2, P.bed / 2 - d * 0.95, d * 0.8); v.controls.target.set(P.bed / 2, P.bed / 2, 0); v.controls.update(); }
     return;
   }
@@ -12423,8 +12425,7 @@ function renderResult(fit){
     }
   }
   const gb = new THREE.Box3().setFromObject(v.group);
-  if (viewMode === 'print') for (let i = 0; i < R.plates; i++) addPlate(i * (p.bed + 40) + p.bed / 2, p.bed / 2, p.bed);
-  else { const gc = gb.getCenter(new THREE.Vector3()), gs = gb.getSize(new THREE.Vector3()); addPlate(gc.x, gc.y, Math.ceil((Math.max(gs.x, gs.y) + 40) / 10) * 10); }
+  { const gc = gb.getCenter(new THREE.Vector3()), gs = gb.getSize(new THREE.Vector3()); addFloor(gc.x, gc.y, gs.x, gs.y); }
   const box = gb.clone().union(new THREE.Box3().setFromObject(v.deco)), c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3());
   if (fit){
     const d = Math.max(sz.x, sz.y) * 1.25 + sz.z * 2 + 40;
