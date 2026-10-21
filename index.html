@@ -103,7 +103,7 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
 .picker .ph{font-size:13px;color:var(--muted);padding:12px;text-align:center}
 .hint{margin:0;color:var(--muted);font-size:12.5px}
 .diagram{border:1px solid var(--line);border-radius:10px;background:var(--soft);padding:8px}
-.diagram svg{width:100%;height:auto;max-height:300px;display:block}
+.diagram svg{width:100%;height:auto;max-height:470px;display:block}
 .diagram svg text{font:12px var(--f-body);fill:var(--fg)}
 .diagram svg text.dm{fill:var(--muted);font-size:11px}
 .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
@@ -12240,7 +12240,7 @@ function buildAll(p){
   if (bm === 'tray' && lipOn && p.lipW < 0.4) err('Бортик поддона тоньше 0,4 мм не напечатается.');
   const skirt = bm === 'tray' && p.trayStyle === 'skirt';
   const riW = skirt ? (rMax(pts, 0.3) || p.B) : 0, foot = skirt && lipOn ? Math.max(0, p.lipW + p.gapTray + 0.8 - riW) : 0, riB = riW + foot, pkR1 = riB - p.lipW - p.gapTray, pkTop = lipOn ? p.lipH + p.gapTray : 0;
-  if (foot > 0.001) warn(`Борт у основания утолщён на ${fmt(foot)} мм внутрь под юбку (высота ${fmt(pkTop)} мм).`);
+  if (foot > 0.001) warn(`Юбка шире борта: у основания остаётся наружная стенка ${fmt(pkR1)} мм, юбка частично выходит внутрь за борт.`);
   if (skirt && lipOn && pkTop > (g ? g.seat : zTop) - 0.5) err('Юбка выше места под лицо — уменьшите высоту бортика.');
   if (hasErr()) return {msgs};
   if (g && p.tFace > g.depth + 0.01 && !g.custom) warn(`Лицо толще паза и выступит над бортом на ${fmt(p.tFace - g.depth)} мм.`);
@@ -12564,49 +12564,108 @@ function renderResult(fit){
 /* ================= схема борта и образец узора ================= */
 function drawDiagram(){
   const box = $('diagram'); if (!box) return;
-  const msgs = [], prof = profileOf(P, msgs), Wv = 340, Hv = 360;
+  const msgs = [], prof = profileOf(P, msgs), Wv = 340, Hv = 452;
   if (!prof){ box.innerHTML = `<svg viewBox="0 0 ${Wv} ${Hv}" role="img" aria-label="Схема борта"><text x="170" y="180" text-anchor="middle" class="dm">${P.wallType === 'custom' ? 'Загрузите файл профиля' : 'Проверьте размеры борта'}</text></svg>`; return; }
   const H = prof.H, maxR = Math.max(...prof.pts.map(q => q.r));
-  const k = Math.min(270 / H, 70 / Math.max(maxR, 0.5));
-  const x0 = 140, y0 = 312, X = r => x0 + r * k, Y = z => y0 - z * k;
+  const fm = P.faceMode, bm = P.backMode, tray = bm === 'tray';
+  const g = fm === 'separate' ? grooveOf(P, prof) : null;
+  const lipOn = tray && P.lipH > 0 && P.lipW > 0, skirtSt = tray && P.trayStyle === 'skirt';
+  const zoff = skirtSt ? P.tBack : 0;                       // в сборе борт стоит на плите поддона
+  const riW = prof.kind === 'custom' ? maxR : (rMax(prof.pts, 0.3) || P.B);
+  const foot = skirtSt && lipOn ? Math.max(0, P.lipW + P.gapTray + 0.8 - riW) : 0;
+  const riB = riW + foot, pkR1 = Math.min(riB - P.lipW - P.gapTray, riW), pkTop = lipOn ? P.lipH + P.gapTray : 0;
+  const notch = skirtSt && lipOn && prof.kind !== 'custom';
+  const Htot = Math.max(H + zoff, g ? zoff + g.seat + P.tFace : 0);
+  const k = 225 / Htot;
+  const trayR = tray ? (skirtSt ? riB + 0.5 : riW + P.gapTray + (lipOn ? P.lipW : 0) + 0.5) : 0;
+  const kx = Math.max(k, Math.min(28, 80 / Math.max(maxR, trayR, 2.5)));
+  const x0 = 100, y0 = 290, xFar = 296, X = r => x0 + r * kx, Y = z => y0 - z * k;
   const cw = slotColor(P.matWall), cf = slotColor(P.matFace), cb = slotColor(P.matBack);
+  const wallPts = (notch ? [{r: 0, z: 0}, {r: pkR1, z: 0}, {r: pkR1, z: pkTop}, {r: riW, z: pkTop}, ...prof.pts.slice(2)] : prof.pts).map(q => ({r: q.r, z: q.z + zoff}));
+  const poly = wallPts.map(q => X(q.r).toFixed(1) + ',' + Y(q.z).toFixed(1)).join(' ');
   let s = `<defs><pattern id="hh" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="${cw}" fill-opacity=".18"/><line x1="0" y1="0" x2="0" y2="6" stroke="${cw}" stroke-width="1.6"/></pattern>
-  <clipPath id="wc"><polygon points="${prof.pts.map(q => X(q.r).toFixed(1) + ',' + Y(q.z).toFixed(1)).join(' ')}"/></clipPath>
-  <marker id="ar" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="context-stroke"/></marker></defs>`;
-  s += `<polygon points="${prof.pts.map(q => X(q.r).toFixed(1) + ',' + Y(q.z).toFixed(1)).join(' ')}" fill="url(#hh)" stroke="${cw}" stroke-width="1.5"/>`;
-  const fm = P.faceMode, bm = P.backMode;
+  <clipPath id="wc"><polygon points="${poly}"/></clipPath></defs>`;
+  s += `<polygon points="${poly}" fill="url(#hh)" stroke="${cw}" stroke-width="1.5"/>`;
   if (P.stripeOn){
     const zBot = bm === 'integral' ? P.tBack : 0, zTop = fm === 'integral' ? H - P.tFace : H, len = zTop - zBot;
     const fs = String(P.stripeFrom).trim().replace(',', '.'), from = fs === '' ? (len - P.stripeH) / 2 : parseFloat(fs);
-    if (isFinite(from)) s += `<rect clip-path="url(#wc)" x="${X(0) - 2}" y="${Y(zBot + from + P.stripeH)}" width="${maxR * k + 4}" height="${P.stripeH * k}" fill="${slotColor(P.matStripe)}"/>`;
+    if (isFinite(from)) s += `<rect clip-path="url(#wc)" x="${X(0) - 2}" y="${Y(zoff + zBot + from + P.stripeH)}" width="${maxR * kx + 4}" height="${P.stripeH * k}" fill="${slotColor(P.matStripe)}"/>`;
   }
-  const ext = 150, zig = (x, y1, y2) => `<path d="M${x} ${y1 - 4}l6 ${(y2 - y1) / 2 + 4}l-6 ${(y2 - y1) / 2 + 4}" fill="none" stroke="var(--muted)" stroke-width="1"/>`;
-  const slab = (rx, z1, z2, col, dashed) => { const y1 = Y(z2), h = Math.max(3, (z2 - z1) * k); return `<rect x="${X(rx)}" y="${y1}" width="${x0 + ext - X(rx)}" height="${h}" fill="${col}" fill-opacity=".9" stroke="var(--muted)" stroke-width="1" ${dashed ? 'stroke-dasharray="4 3"' : ''}/>` + zig(x0 + ext + 2, y1, y1 + h); };
-  if (fm === 'integral'){ const ro = rMin(prof.pts, H - P.tFace / 2) || 0; s += slab(ro, H - P.tFace, H, cf); s += `<text x="${x0 + ext + 12}" y="${Y(H) + 4}" fill="var(--dimD)" style="fill:var(--dimD)">D · ${fmt(P.tFace)} мм</text>`; }
-  if (fm === 'separate'){ const g = grooveOf(P, prof); if (g){ s += slab(g.rIn + P.gapFace, g.seat, g.seat + P.tFace, cf, true); s += `<text x="${x0 + ext + 12}" y="${Y(g.seat + P.tFace) + 4}" style="fill:var(--dimD)">D · ${fmt(P.tFace)} мм</text>`; } }
-  if (bm === 'integral'){ s += slab(0, 0, P.tBack, cb); s += `<text x="${x0 + ext + 12}" y="${Y(0) + 2}" class="dm">задник ${fmt(P.tBack)}</text>`; }
-  if (bm === 'tray'){
-    const ri = (rMax(prof.pts, 0.3) || P.B) + P.gapTray;
+  const zig = (x, y1, y2) => `<path d="M${x} ${y1 - 4}l6 ${(y2 - y1) / 2 + 4}l-6 ${(y2 - y1) / 2 + 4}" fill="none" stroke="var(--muted)" stroke-width="1"/>`;
+  const rect = (r1, z1, r2, z2, col, dashed) => `<rect x="${X(r1)}" y="${Y(z2)}" width="${Math.max(1.5, (r2 - r1) * kx)}" height="${Math.max(2, (z2 - z1) * k)}" fill="${col}" fill-opacity=".9" stroke="var(--muted)" stroke-width="1" ${dashed ? 'stroke-dasharray="4 3"' : ''}/>`;
+  const slab = (r1, z1, z2, col, dashed) => { const y1 = Y(z2), h = Math.max(2, (z2 - z1) * k); return `<rect x="${X(r1)}" y="${y1}" width="${xFar - X(r1)}" height="${h}" fill="${col}" fill-opacity=".9" stroke="var(--muted)" stroke-width="1" ${dashed ? 'stroke-dasharray="4 3"' : ''}/>` + zig(xFar + 2, y1, y1 + h); };
+  const T = (x, y, t, col, anchor, bold) => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" ${anchor ? `text-anchor="${anchor}"` : ''} style="fill:${col};${bold === false ? '' : 'font-weight:600'}">${t}</text>`;
+  const Tr = (x, y, t, col) => `<text transform="translate(${x} ${y}) rotate(-90)" text-anchor="middle" style="fill:${col};font-weight:600">${t}</text>`;
+  const vd = (x, z1, z2, col, xe) => `<line x1="${x}" y1="${Y(z1)}" x2="${x}" y2="${Y(z2)}" stroke="${col}" stroke-width="1.5"/><line x1="${x - 4}" y1="${Y(z1)}" x2="${xe}" y2="${Y(z1)}" stroke="${col}" stroke-dasharray="3 3"/><line x1="${x - 4}" y1="${Y(z2)}" x2="${xe}" y2="${Y(z2)}" stroke="${col}" stroke-dasharray="3 3"/>`;
+  const hd = (y, r1, r2, col) => `<line x1="${X(r1)}" y1="${y}" x2="${X(r2)}" y2="${y}" stroke="${col}" stroke-width="1.5"/><line x1="${X(r1)}" y1="${y - 5}" x2="${X(r1)}" y2="${y + 5}" stroke="${col}"/><line x1="${X(r2)}" y1="${y - 5}" x2="${X(r2)}" y2="${y + 5}" stroke="${col}"/>`;
+  const lead = (x1, y1, x2, y2, col) => `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${col}" stroke-width=".9"/><circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="1.8" fill="${col}"/>`;
+  const cT = 'var(--accent)', cG = 'var(--warn)', cS = 'var(--dimE)';
+  const rIn = X(Math.max(maxR, trayR)) + 22;           // колонка подписей справа от борта
+  const calls = [];                   // подписи с выносками: {y: цель по вертикали, tx, ty: точка на детали, t, col}
+  // --- лицо
+  if (fm === 'integral'){ const ro = rMin(prof.pts, H - P.tFace / 2) || 0; s += slab(ro, zoff + H - P.tFace, zoff + H, cf); s += T(xFar, Y(zoff + H) - 7, `Лицо D · ${fmt(P.tFace)} мм`, 'var(--dimD)', 'end'); }
+  if (fm === 'separate' && g){
+    s += slab(g.rIn + P.gapFace, zoff + g.seat, zoff + g.seat + P.tFace, cf, true);
+    s += T(xFar, Y(zoff + g.seat + P.tFace) - 7, `Лицо D · ${fmt(P.tFace)} мм · зазор ${fmt(P.gapFace)}`, 'var(--dimD)', 'end');
+  }
+  // --- задник
+  if (bm === 'integral'){ s += slab(0, 0, P.tBack, cb); s += lead(rIn - 4, Y(0) + 13, X(maxR) + 12, Y(P.tBack / 2), cT) + T(rIn, Y(0) + 17, `Задник T · ${fmt(P.tBack)} мм`, cT); }
+  if (tray){
+    const ri = skirtSt ? 0 : riW + P.gapTray;
     s += slab(ri, 0, P.tBack, cb);
-    s += `<rect x="${X(ri)}" y="${Y(P.tBack + P.lipH)}" width="${Math.max(2, P.lipW * k)}" height="${P.lipH * k}" fill="${cb}" fill-opacity=".9" stroke="var(--muted)" stroke-width="1"/>`;
-    s += `<text x="${x0 + ext + 12}" y="${Y(0) + 2}" class="dm">поддон ${fmt(P.tBack)}</text><text x="${X(ri + P.lipW) + 6}" y="${Y(P.tBack + P.lipH / 2) + 4}" class="dm">бортик ${fmt(P.lipH)}</text>`;
+    if (lipOn){
+      const r1 = skirtSt ? riB - P.lipW : ri;
+      s += rect(r1, P.tBack, r1 + P.lipW, P.tBack + P.lipH, cb);
+      calls.push({tx: X(r1 + P.lipW), ty: Y(P.tBack + P.lipH * 0.5), t: `${skirtSt ? 'Юбка' : 'Бортик'} h · ${fmt(P.lipH)} мм`, col: cT});
+      calls.push({tx: X(r1 + P.lipW / 2), ty: Y(P.tBack + P.lipH * 0.85), t: `${skirtSt ? 'Юбка' : 'Бортик'} w · ${fmt(P.lipW)} мм`, col: cT});
+    }
+    s += lead(rIn - 4, Y(0) + 13, X(skirtSt ? maxR : ri + (lipOn ? P.lipW : 0)) + 14, Y(P.tBack / 2), cT) + T(rIn, Y(0) + 17, `Задник T · ${fmt(P.tBack)} мм`, cT);
+    if (skirtSt && lipOn) calls.push({tx: X(pkR1 + P.gapTray + P.lipW / 2), ty: Y(P.tBack + pkTop - P.gapTray / 2), t: `Зазор g · ${fmt(P.gapTray)} мм`, col: cG, dy: -1});
   }
-  // размеры
-  const xa = x0 - 34;
-  s += `<line x1="${xa}" y1="${Y(0)}" x2="${xa}" y2="${Y(H)}" stroke="var(--dimA)" stroke-width="1.5" marker-start="url(#ar)" marker-end="url(#ar)"/>`;
-  s += `<line x1="${xa}" y1="${Y(H)}" x2="${x0}" y2="${Y(H)}" stroke="var(--dimA)" stroke-dasharray="3 3"/><line x1="${xa}" y1="${Y(0)}" x2="${x0}" y2="${Y(0)}" stroke="var(--dimA)" stroke-dasharray="3 3"/>`;
-  s += `<text x="${xa - 8}" y="${Y(H / 2) + 4}" text-anchor="end" style="fill:var(--dimA);font-weight:600">A · ${fmt(H)} мм</text>`;
+  // подписи с выносками: раскладываем по вертикали, чтобы не слипались
+  calls.sort((a, b) => b.ty - a.ty);
+  let yPrev = Infinity;
+  for (const c of calls){
+    const ty = isFinite(yPrev) ? Math.min(c.ty, yPrev - 15) : c.ty;
+    s += lead(rIn - 4, ty - 4, c.tx, c.ty, c.col) + T(rIn, ty, c.t, c.col, null, true);
+    yPrev = ty;
+  }
+  // --- размеры слева: A (высота борта) и общая высота
+  const xa = x0 - 30;
+  s += vd(xa, zoff, zoff + H, 'var(--dimA)', x0) + Tr(xa - 7, (Y(zoff) + Y(zoff + H)) / 2, `A · ${fmt(H)} мм`, 'var(--dimA)');
+  if (zoff > 0){ const xb = x0 - 62; s += vd(xb, 0, Htot, 'var(--muted)', x0) + Tr(xb - 7, (Y(0) + Y(Htot)) / 2, `с задником ${fmt(Htot)} мм`, 'var(--muted)'); }
+  // --- размеры снизу
   const Bv = prof.kind === 'custom' ? maxR : P.B;
-  s += `<line x1="${X(0)}" y1="${y0 + 16}" x2="${X(Bv)}" y2="${y0 + 16}" stroke="var(--dimB)" stroke-width="1.5"/><line x1="${X(0)}" y1="${y0 + 10}" x2="${X(0)}" y2="${y0 + 22}" stroke="var(--dimB)"/><line x1="${X(Bv)}" y1="${y0 + 10}" x2="${X(Bv)}" y2="${y0 + 22}" stroke="var(--dimB)"/>`;
-  s += `<text x="${(X(0) + X(Bv)) / 2}" y="${y0 + 38}" text-anchor="middle" style="fill:var(--dimB);font-weight:600">B · ${fmt(Bv)} мм</text>`;
-  if ((prof.kind === 'standard' || prof.kind === 'ledge') && P.C > 0){
-    const xc = X(prof.kind === 'ledge' ? P.B + P.E : P.B) + 18;
-    s += `<line x1="${xc}" y1="${Y(H)}" x2="${xc}" y2="${Y(H - P.C)}" stroke="var(--dimC)" stroke-width="1.5"/><line x1="${xc - 5}" y1="${Y(H)}" x2="${xc + 5}" y2="${Y(H)}" stroke="var(--dimC)"/><line x1="${xc - 5}" y1="${Y(H - P.C)}" x2="${xc + 5}" y2="${Y(H - P.C)}" stroke="var(--dimC)"/>`;
-    s += `<text x="${xc + 9}" y="${(Y(H) + Y(H - P.C)) / 2 + 4}" style="fill:var(--dimC);font-weight:600">C · ${fmt(P.C)} мм</text>`;
+  s += hd(y0 + 18, 0, Bv, 'var(--dimB)') + T(X(0), y0 + 38, `B · ${fmt(Bv)} мм (толщина борта)`, 'var(--dimB)');
+  let yb = y0 + 38;
+  if (tray && lipOn){
+    const a = skirtSt ? pkR1 : riW, gp = P.gapTray, w = P.lipW, base = skirtSt ? 0 : riW;
+    yb += 22;
+    if (skirtSt){
+      s += hd(yb, 0, pkR1, 'var(--dimB)') + hd(yb, pkR1, pkR1 + gp, cG) + hd(yb, pkR1 + gp, pkR1 + gp + w, cT);
+      s += `<text x="${X(0).toFixed(1)}" y="${yb + 20}" style="font-weight:600"><tspan style="fill:var(--dimB)">стенка ${fmt(pkR1)}</tspan><tspan style="fill:${cG}"> · зазор ${fmt(gp)}</tspan><tspan style="fill:${cT}"> · юбка ${fmt(w)} мм</tspan></text>`;
+    } else {
+      s += hd(yb, riW, riW + gp, cG) + hd(yb, riW + gp, riW + gp + w, cT);
+      s += `<text x="${X(0).toFixed(1)}" y="${yb + 20}" style="font-weight:600"><tspan style="fill:${cG}">зазор ${fmt(gp)}</tspan><tspan style="fill:${cT}"> · бортик поддона ${fmt(w)} мм</tspan></text>`;
+    }
+    yb += 20;
   }
-  if (prof.kind === 'ledge') s += `<text x="${X(P.B + P.E) + 10}" y="${Y(H - Math.max(0, P.C)) + 22}" style="fill:var(--dimE);font-weight:600">E · ${fmt(P.E)} мм</text><text x="${X(P.B + P.E) + 10}" y="${Y(H - Math.max(0, P.C)) + 38}" style="fill:var(--dimE);font-weight:600">α · ${fmt(P.alpha, 0)}°</text>`;
-  s += `<text x="${X(0) - 8}" y="${Y(H * 0.35)}" text-anchor="end" class="dm">Снаружи</text><text x="${X(maxR) + 10}" y="${Y(H * 0.35)}" class="dm">Внутри</text>`;
-  box.innerHTML = `<svg viewBox="0 0 ${Wv} ${Hv}" role="img" aria-label="Схема борта в разрезе">${s}</svg>`;
+  if (tray || bm === 'integral'){
+    const R0 = result, dd = skirtSt ? 0 : 2 * (riW + (tray ? P.gapTray : 0));
+    const txt = tray ? (skirtSt ? 'Задник — по наружному контуру букв, борт стоит на плите' : 'Задник вставляется внутрь борта, он меньше контура') : 'Задник заодно с бортом';
+    s += `<text x="12" y="${yb + 24}" class="dm">${txt}</text>`;
+    if (R0) s += `<text x="12" y="${yb + 40}" class="dm">Габарит надписи ${fmt(R0.W, 0)} × ${fmt(R0.Hh, 0)} мм${dd ? `, задник ≈ ${fmt(Math.max(0, R0.W - dd), 0)} × ${fmt(Math.max(0, R0.Hh - dd), 0)} мм` : ''}</text>`;
+  }
+  // --- паз лица и ступенька
+  if ((prof.kind === 'standard' || prof.kind === 'ledge') && P.C > 0){
+    const xc = X(maxR) + 10;
+    s += `<line x1="${xc}" y1="${Y(zoff + H)}" x2="${xc}" y2="${Y(zoff + H - P.C)}" stroke="var(--dimC)" stroke-width="1.5"/><line x1="${xc - 4}" y1="${Y(zoff + H)}" x2="${xc + 4}" y2="${Y(zoff + H)}" stroke="var(--dimC)"/><line x1="${xc - 4}" y1="${Y(zoff + H - P.C)}" x2="${xc + 4}" y2="${Y(zoff + H - P.C)}" stroke="var(--dimC)"/>`;
+    s += T(xc + 7, (Y(zoff + H) + Y(zoff + H - P.C)) / 2 + 4, `C · ${fmt(P.C)} мм`, 'var(--dimC)');
+  }
+  if (prof.kind === 'ledge') s += T(X(P.B + P.E) + 8, Y(zoff + H - Math.max(0, P.C)) + 20, `E · ${fmt(P.E)} мм`, 'var(--dimE)') + T(X(P.B + P.E) + 8, Y(zoff + H - Math.max(0, P.C)) + 35, `α · ${fmt(P.alpha, 0)}°`, 'var(--dimE)');
+  s += `<text x="${X(0) - 4}" y="${Y(Htot) - 26}" text-anchor="end" class="dm">Снаружи</text><text x="${X(0) + 4}" y="${Y(Htot) - 26}" class="dm">Внутри →</text>`;
+  if (kx > k * 1.4) s += `<text x="${Wv - 6}" y="${Hv - 8}" text-anchor="end" class="dm" style="font-size:9.5px">по горизонтали масштаб увеличен</text>`;
+  box.innerHTML = `<svg viewBox="0 0 ${Wv} ${Hv}" role="img" aria-label="Схема борта, задника и лица в разрезе">${s}</svg>`;
 }
 function pathD(paths, flipH){ return paths.map(pth => 'M' + pth.map(q => (q.X / S).toFixed(2) + ' ' + (flipH - q.Y / S).toFixed(2)).join('L') + 'Z').join(''); }
 function drawSample(){
@@ -12797,6 +12856,7 @@ function build(){
   const old = result;
   result = R.letters ? R : null;
   renderResult(needFit); if (result) needFit = false;
+  drawDiagram();
   if (old) disposeResult(old);
   showMsgs('msgs', srcMsgs.concat(R.msgs));
   fillStats(); stripeText(); setBusy(false);
