@@ -12275,6 +12275,233 @@ function meshVol(g){
   }
   return Math.abs(v) / 6;
 }
+// ===== цельная сетка детали =====
+// Деталь строится стопкой призм (пояса борта, юбка, плита…). Для слайсера сливаем стопку одного пластика
+// в одну замкнутую сетку: боковые стенки каждого пояса + горизонтальные «ступеньки» только там, где сечение меняется.
+// Т-стыки (вершина одной грани на ребре другой) убираем — сетка получается связной и без открытых рёбер,
+// и «Разделить на части» в слайсере больше не рассыпает букву на пояса.
+function stackMesh(layers){
+  const L = layers.filter(l => l.ex.length && l.b - l.a > 1e-6);
+  if (!L.length) return null;
+  const q6 = z => Math.round(z * 1e6) / 1e6;
+  const zs0 = [...new Set(L.flatMap(l => [q6(l.a), q6(l.b)]))].sort((a, b) => a - b);
+  const pathsOf = l => l.ex.flatMap(e => [e.outer].concat(e.holes));
+  // сечения по интервалам высоты; одинаковые соседние интервалы склеиваем
+  const zs = [zs0[0]], R = [];
+  // вершины-близнецы (разница округления между соседними слоями ≤ 0,002 мм) сводим к одной точке — иначе между слоями щели нулевой ширины
+  const vm = new Map(), SN = 2; let curK = 0;
+  // точку подтягиваем только к вершинам ПРЕДЫДУЩИХ слоёв: соседние точки одного контура не склеиваем
+  const snapV = q => {
+    const cx = Math.floor(q.X / (2 * SN)), cy = Math.floor(q.Y / (2 * SN));
+    let best = null;
+    for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++){ const l = vm.get((cx + ox) * 1e7 + (cy + oy)); if (l) for (const v of l) if (v.k < curK && Math.abs(v.X - q.X) <= SN && Math.abs(v.Y - q.Y) <= SN){ if (v.X === q.X && v.Y === q.Y) return v; if (!best) best = v; } }
+    if (best) return best;
+    const v = {X: q.X, Y: q.Y, k: curK}, kk = cx * 1e7 + cy; let l = vm.get(kk); if (!l){ l = []; vm.set(kk, l); } l.push(v); return v;
+  };
+  const snapPath = pth => { const o = []; for (const q of pth){ const v = snapV(q), l = o[o.length - 1]; if (!l || l !== v) o.push(v); } while (o.length > 1 && o[0] === o[o.length - 1]) o.pop(); return o; };
+  let lastKey = null;
+  for (let k = 0; k + 1 < zs0.length; k++){
+    const za = zs0[k], zb = zs0[k + 1];
+    const all = L.filter(l => q6(l.a) <= za + 1e-7 && q6(l.b) >= zb - 1e-7).flatMap(pathsOf);
+    curK = k + 1;
+    // чистка: отрезки и изломы мельче 0,01 мм (остатки округлений скруглений) убираем — для печати они ничего не значат
+    const reg = (all.length ? CL.Clipper.CleanPolygons(clip(CT.ctUnion, all, null), 10) : []).map(snapPath).filter(pth => pth.length >= 3);
+    const key = reg.length ? pathHash(reg.map(pth => pth.slice().sort((u, v) => u.X - v.X || u.Y - v.Y))) : 'empty';
+    if (key === lastKey){ zs[zs.length - 1] = zb; continue; }
+    R.push(reg); zs.push(zb); lastKey = key;
+  }
+  const nI = R.length, TOL = 2, CELL = 2 * S;       // допуск — 0,002 мм (единицы Clipper)
+  const ckey = (cx, cy) => (cx + 40000) * 80000 + (cy + 40000), vkey = q => q.X * 4194304 + q.Y;
+  // сетка отрезков контуров: клетка → [номер контура, номер отрезка]
+  const segGrid = paths => {
+    const m = new Map(), put = (cx, cy, v) => { const k = ckey(cx, cy); let l = m.get(k); if (!l){ l = []; m.set(k, l); } l.push(v); };
+    paths.forEach((pth, pi) => { const n = pth.length; for (let i = 0; i < n; i++){
+      const u = pth[i], w = pth[(i + 1) % n];
+      const x0 = Math.floor((Math.min(u.X, w.X) - TOL) / CELL), x1 = Math.floor((Math.max(u.X, w.X) + TOL) / CELL), y0 = Math.floor((Math.min(u.Y, w.Y) - TOL) / CELL), y1 = Math.floor((Math.max(u.Y, w.Y) + TOL) / CELL);
+      if ((x1 - x0 + 1) * (y1 - y0 + 1) <= 64){ for (let cx = x0; cx <= x1; cx++) for (let cy = y0; cy <= y1; cy++) put(cx, cy, [pi, i]); }
+      else { const seen = new Set(), L = Math.hypot(w.X - u.X, w.Y - u.Y), ns = Math.ceil(L / (CELL * 0.5)) + 1;
+        for (let j = 0; j <= ns; j++){ const cx = Math.floor((u.X + (w.X - u.X) * j / ns) / CELL), cy = Math.floor((u.Y + (w.Y - u.Y) * j / ns) / CELL);
+          for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++){ const k = ckey(cx + ox, cy + oy); if (!seen.has(k)){ seen.add(k); put(cx + ox, cy + oy, [pi, i]); } } } }
+    } });
+    return m;
+  };
+  // вставка: точки-кандидаты, лежащие внутри отрезков контуров → списки вставок по отрезкам
+  const node = (paths, grid, cands) => {
+    const ins = paths.map(pth => pth.map(() => null));
+    for (const q of cands){
+      const l = grid.get(ckey(Math.floor(q.X / CELL), Math.floor(q.Y / CELL))); if (!l) continue;
+      for (const [pi, i] of l){
+        const pth = paths[pi], u = pth[i], w = pth[(i + 1) % pth.length], dx = w.X - u.X, dy = w.Y - u.Y, L2 = dx * dx + dy * dy; if (L2 < 1) continue;
+        const Ln = Math.sqrt(L2), t = ((q.X - u.X) * dx + (q.Y - u.Y) * dy) / L2;
+        if (t * Ln <= TOL || (1 - t) * Ln <= TOL) continue;
+        if (Math.abs((q.X - u.X) * dy - (q.Y - u.Y) * dx) / Ln > TOL) continue;
+        let a = ins[pi][i]; if (!a) a = ins[pi][i] = [];
+        if (!a.some(o => o[1].X === q.X && o[1].Y === q.Y)) a.push([t, q]);
+      }
+    }
+    return ins.map(r => r.map(a => a ? a.sort((x, y) => x[0] - y[0]).map(o => o[1]) : []));
+  };
+  const grids = R.map(segGrid), keysOf = paths => { const st = new Set(); for (const pth of paths) for (const q of pth) st.add(vkey(q)); return st; }, keys = R.map(keysOf);
+  const botIns = [], topIns = [], caps = [];
+  // узлы уровня: на отрезки контуров вставляем вершины других контуров этой высоты, которые на них лежат
+  for (let k = 0; k <= nI; k++){
+    const below = k > 0 ? R[k - 1] : [], above = k < nI ? R[k] : [], z = zs[k];
+    const upEx = below.length ? treeEx(CT.ctDifference, below, above.length ? above : null) : [];
+    const dnEx = above.length ? treeEx(CT.ctDifference, above, below.length ? below : null) : [];
+    const capRings = []; for (const e of upEx.concat(dnEx)){ capRings.push(e.outer); capRings.push(...e.holes); }
+    const capPts = capRings.flat();
+    const kb = k > 0 ? keys[k - 1] : new Set(), ka = k < nI ? keys[k] : new Set();
+    if (k > 0) topIns[k - 1] = node(below, grids[k - 1], below.length && (above.length || capPts.length) ? above.flat().concat(capPts).filter(q => !kb.has(vkey(q))) : []);
+    if (k < nI) botIns[k] = node(above, grids[k], above.length && (below.length || capPts.length) ? below.flat().concat(capPts).filter(q => !ka.has(vkey(q))) : []);
+    if (capRings.length){
+      const cg = segGrid(capRings), cIns = node(capRings, cg, below.flat().concat(above.flat(), capPts));
+      const ring = idx => { const r = capRings[idx], out = []; r.forEach((u, i) => { out.push(u); out.push(...cIns[idx][i]); }); return out; };
+      let idx = 0;
+      for (const e of upEx.concat(dnEx)){
+        const up = upEx.includes(e), outer = ring(idx++), holes = e.holes.map(() => ring(idx++));
+        caps.push({z, up, outer, holes});
+      }
+    }
+  }
+  const pos = [];
+  const P3 = (q, z) => [q.X / S, q.Y / S, z];
+  const tri = (a, b, c) => pos.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
+  // боковые стенки: «молния» между узлами низа и верха каждого отрезка (нормаль наружу у Clipper-контуров)
+  for (let k = 0; k < nI; k++){
+    const za = zs[k], zb = zs[k + 1];
+    R[k].forEach((pth, pi) => {
+      const n = pth.length;
+      for (let i = 0; i < n; i++){
+        const u = pth[i], w = pth[(i + 1) % n]; if (u.X === w.X && u.Y === w.Y) continue;
+        const dx = w.X - u.X, dy = w.Y - u.Y, L2 = dx * dx + dy * dy, par = q => ((q.X - u.X) * dx + (q.Y - u.Y) * dy) / L2;
+        const bc = [u].concat(botIns[k][pi][i], [w]), tc = [u].concat(topIns[k][pi][i], [w]);
+        let a = 0, c = 0;
+        while (a < bc.length - 1 || c < tc.length - 1){
+          if (c >= tc.length - 1 || (a < bc.length - 1 && par(bc[a + 1]) <= par(tc[c + 1]))){ tri(P3(bc[a], za), P3(bc[a + 1], za), P3(tc[c], zb)); a++; }
+          else { tri(P3(bc[a], za), P3(tc[c + 1], zb), P3(tc[c], zb)); c++; }
+        }
+      }
+    });
+  }
+  // горизонтальные грани; точки на прямых участках, которые триангуляция выкинула, возвращаем делением треугольника
+  for (const cp of caps){
+    const rings = [cp.outer].concat(cp.holes).map(r => r.filter((q, i) => { const p = r[(i + r.length - 1) % r.length]; return !(p.X === q.X && p.Y === q.Y); })).filter(r => r.length >= 3);
+    if (!rings.length || rings[0] !== rings[0]) continue;
+    const vs = [], ringOf = [];
+    rings.forEach((r, ri) => r.forEach((q, i) => { vs.push(q); ringOf.push([ri, i]); }));
+    const base = []; let acc = 0; for (const r of rings){ base.push(acc); acc += r.length; }
+    let faces;
+    try { faces = THREE.ShapeUtils.triangulateShape(rings[0].map(q => new THREE.Vector2(q.X, q.Y)), rings.slice(1).map(r => r.map(q => new THREE.Vector2(q.X, q.Y)))); } catch (e){ continue; }
+    // вершины крышки (любых контуров), лежащие на ребре треугольника, — Т-стыки: делим треугольник по ним
+    const cg = new Map(), CK = (cx, cy) => (cx + 40000) * 80000 + (cy + 40000);
+    vs.forEach((q, i) => { const k = CK(Math.floor(q.X / CELL), Math.floor(q.Y / CELL)); let l = cg.get(k); if (!l){ l = []; cg.set(k, l); } l.push(i); });
+    const ecache = new Map();
+    const skipped = (x, y) => {
+      const lo = Math.min(x, y), hi = Math.max(x, y), ek = lo * 1e7 + hi;
+      let res = ecache.get(ek);
+      if (res === undefined){
+        // ищем в каноническом направлении lo → hi
+        const X = vs[lo], Y = vs[hi], dx = Y.X - X.X, dy = Y.Y - X.Y, L2 = dx * dx + dy * dy, Ln = Math.sqrt(L2), out = [], seen = new Set();
+        if (Ln >= 2){
+          const n = Math.ceil(Ln / (CELL * 0.5)) + 1;
+          for (let i = 0; i <= n; i++){
+            const cx = Math.floor((X.X + dx * i / n) / CELL), cy = Math.floor((X.Y + dy * i / n) / CELL);
+            for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++){
+              const k = CK(cx + ox, cy + oy); if (seen.has(k)) continue; seen.add(k);
+              const l = cg.get(k); if (!l) continue;
+              for (const j of l){
+                const q = vs[j]; if ((q.X === X.X && q.Y === X.Y) || (q.X === Y.X && q.Y === Y.Y)) continue;
+                const t = ((q.X - X.X) * dx + (q.Y - X.Y) * dy) / L2; if (t * Ln <= 1 || (1 - t) * Ln <= 1) continue;
+                if (Math.abs((q.X - X.X) * dy - (q.Y - X.Y) * dx) / Ln > 1) continue;
+                if (!out.some(o => vs[o[1]].X === q.X && vs[o[1]].Y === q.Y)) out.push([t, j]);
+              }
+            }
+          }
+        }
+        res = out.length ? out.sort((u, v) => u[0] - v[0]).map(o => o[1]) : null;
+        ecache.set(ek, res);
+      }
+      if (!res) return null;
+      return x === lo ? res : res.slice().reverse();
+    };
+    const area2 = (i, j, k) => { const a = vs[i], b = vs[j], d = vs[k]; return (b.X - a.X) * (d.Y - a.Y) - (b.Y - a.Y) * (d.X - a.X); };
+    const stack = faces.map(f => [f[0], f[1], f[2], 0]).filter(t => area2(t[0], t[1], t[2]) !== 0), done = [];
+    let guard = 0;
+    while (stack.length && guard++ < 1e6){
+      const t = stack.pop(); let sp = false;
+      for (let e = 0; e < 3 && !sp; e++){
+        const x = t[e], y = t[(e + 1) % 3], c = t[(e + 2) % 3];
+        // вершина напротив должна стоять в стороне от ребра — вырожденные (нулевые) треугольники не делим
+        const X = vs[x], Y = vs[y], Cc = vs[c], Ln = Math.hypot(Y.X - X.X, Y.Y - X.Y);
+        if (Ln < 1) continue;
+        if (t[3] > 60) continue;                                  // предохранитель от зацикливания
+        const run = skipped(x, y); if (!run) continue;
+        const ch = [x].concat(run, [y]); for (let j = 0; j + 1 < ch.length; j++) stack.push([ch[j], ch[j + 1], c, t[3] + 1]); sp = true;
+      }
+      if (!sp) done.push(t);
+    }
+    for (const [i0, i1, i2] of done){
+      const a = vs[i0], b = vs[i1], d = vs[i2], ar = (b.X - a.X) * (d.Y - a.Y) - (b.Y - a.Y) * (d.X - a.X);
+      if (ar === 0) continue;
+      if ((ar > 0) === cp.up) tri(P3(a, cp.z), P3(b, cp.z), P3(d, cp.z)); else tri(P3(a, cp.z), P3(d, cp.z), P3(b, cp.z));
+    }
+  }
+  return weldGeom(pos);
+}
+// сварка вершин ближе 0,003 мм на одной высоте (разница округления точек пересечения) и удаление вырожденных треугольников
+function weldGeom(pos){
+  const W = 3e-3, lv = new Map(), out = [];
+  const rep = (x, y, z) => {
+    const zk = Math.round(z * 1e5); let g = lv.get(zk); if (!g){ g = new Map(); lv.set(zk, g); }
+    const cx = Math.floor(x / W), cy = Math.floor(y / W);
+    for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++){ const l = g.get((cx + ox) * 1e7 + (cy + oy)); if (l) for (const q of l) if (Math.abs(q[0] - x) <= W && Math.abs(q[1] - y) <= W) return q; }
+    const q = [x, y, z], k = cx * 1e7 + cy; let l = g.get(k); if (!l){ l = []; g.set(k, l); } l.push(q); return q;
+  };
+  for (let i = 0; i < pos.length; i += 9){
+    const a = rep(pos[i], pos[i + 1], pos[i + 2]), b = rep(pos[i + 3], pos[i + 4], pos[i + 5]), c = rep(pos[i + 6], pos[i + 7], pos[i + 8]);
+    if (a === b || b === c || a === c) continue;
+    out.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
+  }
+  closeHoles(out);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(out, 3));
+  g.computeVertexNormals();
+  return g;
+}
+// страховка: если после сборки остались мелкие дыры (петли из открытых рёбер — следы округления на вырожденных местах), закрываем их
+function closeHoles(pos){
+  const id = new Map(), P = [], key = (x, y, z) => x + ',' + y + ',' + z;
+  const vi = (x, y, z) => { const k = key(x, y, z); let i = id.get(k); if (i === undefined){ i = P.length; id.set(k, i); P.push([x, y, z]); } return i; };
+  const E = new Map(), T = [];
+  for (let i = 0; i < pos.length; i += 9){ const a = vi(pos[i], pos[i + 1], pos[i + 2]), b = vi(pos[i + 3], pos[i + 4], pos[i + 5]), c = vi(pos[i + 6], pos[i + 7], pos[i + 8]); T.push([a, b, c]); for (const [u, w] of [[a, b], [b, c], [c, a]]) E.set(u + '>' + w, (E.get(u + '>' + w) || 0) + 1); }
+  const nxt = new Map();
+  for (const [k] of E){ const [u, w] = k.split('>').map(Number); if (!E.has(w + '>' + u)){ if (!nxt.has(u)) nxt.set(u, []); nxt.get(u).push(w); } }
+  if (!nxt.size) return 0;
+  let added = 0; const usedE = new Set();
+  for (const [s0, ws] of nxt) for (const w0 of ws){
+    if (usedE.has(s0 + '>' + w0)) continue;
+    const loop = [s0]; let u = s0, w = w0, ok = false;
+    for (let step = 0; step < 16; step++){
+      usedE.add(u + '>' + w); if (w === s0){ ok = true; break; }
+      loop.push(w); const cand = (nxt.get(w) || []).filter(x => !usedE.has(w + '>' + x)); if (!cand.length) break; u = w; w = cand[0];
+    }
+    if (!ok || loop.length < 3) continue;
+    // петля открытых рёбер u→w; закрывающие треугольники идут в обратную сторону
+    for (let j = 1; j + 1 < loop.length; j++){ const A = P[loop[0]], B = P[loop[j + 1]], C = P[loop[j]]; pos.push(A[0], A[1], A[2], B[0], B[1], B[2], C[0], C[1], C[2]); added++; }
+  }
+  return added;
+}
+// слои печатной детали одного пластика → одна сетка; рельеф («кожа») остаётся отдельной оболочкой
+function mergeLayers(layers){
+  const out = [], groups = new Map();
+  for (const l of layers){ if (l.g){ out.push(l); continue; } if (!groups.has(l.mat)) groups.set(l.mat, []); groups.get(l.mat).push(l); }
+  for (const [mat, ls] of groups){
+    const g = stackMesh(ls); if (!g) continue;
+    const cnt = {}; for (const l of ls) cnt[l.role] = (cnt[l.role] || 0) + 1;
+    out.unshift({ex: ls.flatMap(l => l.ex), a: Math.min(...ls.map(l => l.a)), b: Math.max(...ls.map(l => l.b)), mat, role: Object.keys(cnt).sort((u, v) => cnt[v] - cnt[u])[0], vol: ls.reduce((t, l) => t + (l.vol || 0), 0), g});
+  }
+  return out;
+}
 function scan(pts, z){
   const xs = [], n = pts.length;
   for (let i = 0; i < n; i++){
@@ -12521,7 +12748,7 @@ function simplifyPaths(A, tolMm){
 let letterCacheOn = false, letterCacheKey = '';
 const letterCache = new Map();
 const MATK = {wall: 'matWall', stripe: 'matStripe', face: 'matFace', back: 'matBack', pattern: 'matPat'};
-function geomKey(p){ return JSON.stringify(Object.keys(p).sort().filter(k => !/^(c\d|mat[A-Z]\w*|bed|fil[A-Z]\w*)$/.test(k)).map(k => [k, p[k]])) + '|' + (profile ? profile.H + ':' + profile.pts.length + ':' + profile.pts.reduce((s, q) => s + q.r * 7 + q.z, 0) : ''); }
+function geomKey(p){ return JSON.stringify(Object.keys(p).sort().filter(k => !/^(c\d|bed|fil[A-Z]\w*)$/.test(k)).map(k => [k, p[k]])) + '|' + (profile ? profile.H + ':' + profile.pts.length + ':' + profile.pts.reduce((s, q) => s + q.r * 7 + q.z, 0) : ''); }
 function pathHash(A){ let h = 2166136261 >>> 0; for (const pth of A){ h = Math.imul(h ^ pth.length, 16777619); for (const q of pth){ h = Math.imul(h ^ q.X, 16777619); h = Math.imul(h ^ q.Y, 16777619); } } return (h >>> 0).toString(36) + ':' + A.length; }
 function buildAll(p){ const it = buildGen(p); let r; do r = it.next(); while (!r.done); return r.value; }
 function* buildGen(p){
@@ -12626,14 +12853,13 @@ function* buildGen(p){
       const pushL = (e, a, b) => { if (e.length && b - a > 1e-6) body.layers.push({ex: e, a, b, role: inStripe ? 'stripe' : 'wall', mat: inStripe ? p.matStripe : p.matWall}); };
       const zA = sWins && sWins.length ? Math.max(bd.a, snap.rz0) : 0, zB = sWins && sWins.length ? Math.min(bd.b, snapZs[snapZs.length - 1]) : 0;
       if (zB - zA > 1e-6){
-        // глухие гнёзда под защёлки: стенка целиком, кроме коротких участков у защёлок; эти участки — тонкими слоями с вырезом
+        // глухие гнёзда под защёлки: в зоне гнёзд стенка режется на тонкие слои с вырезом (сборщик сетки потом сольёт их в одну деталь)
         const ps = ex.flatMap(e => [e.outer].concat(e.holes));
         pushL(ex, bd.a, zA); pushL(ex, zB, bd.b);
-        pushL(diffEx(ps, sWins), zA, zB);
-        const loc = clip(CT.ctIntersection, ps, sWins), zs = [zA].concat(snapZs.filter(z => z > zA + 1e-6 && z < zB - 1e-6), [zB]);
+        const zs = [zA].concat(snapZs.filter(z => z > zA + 1e-6 && z < zB - 1e-6), [zB]);
         for (let i = 0; i + 1 < zs.length; i++){
           const dq = snap.depth((zs[i] + zs[i + 1]) / 2);
-          pushL(dq > 1e-4 ? diffEx(loc, clip(CT.ctDifference, off(snap.riW - dq), off(snap.riW + 0.05))) : toEx(loc), zs[i], zs[i + 1]);
+          pushL(dq > 1e-4 ? diffEx(ps, clip(CT.ctIntersection, sWins, clip(CT.ctDifference, off(snap.riW - dq), off(snap.riW + 0.05)))) : ex, zs[i], zs[i + 1]);
         }
       } else pushL(ex, bd.a, bd.b);
     }
@@ -12701,7 +12927,9 @@ function* buildGen(p){
     }
     for (const pc of pieces){
       pc.layers = pc.layers.filter(l => l.ex.length || l.g);
-      for (const l of pc.layers){ if (l.vol == null) l.vol = l.ex.length ? exsArea(l.ex) * (l.b - l.a) : 0; if (!l.g) l.g = extrude(l.ex, l.a, l.b - l.a); }
+      for (const l of pc.layers) if (l.vol == null) l.vol = l.ex.length ? exsArea(l.ex) * (l.b - l.a) : 0;
+      if (!pc.noPrint) pc.layers = mergeLayers(pc.layers);
+      for (const l of pc.layers) if (!l.g) l.g = extrude(l.ex, l.a, l.b - l.a);
       pc.layers = pc.layers.filter(l => l.g);
     }
     letters.push({index: li + 1, pieces: pieces.filter(pc => pc.layers.length), w: (bb.x1 - bb.x0) / S, h: (bb.y1 - bb.y0) / S});
@@ -13704,7 +13932,7 @@ function bindUI(){
   downloadsApi().then(dl => { dlMode = !!dl; $('btnAll').hidden = !dlMode; $('btn3mf').hidden = dlMode; $('btnStl').hidden = dlMode; });
 }
 
-window.__bukvy = {P, DEF, rebuildSource, buildAll, usageOf, meshVol, drawSnap, snapCfg, snapT, clip, offset, CT, drawDiagram, decoProfile, profileOf, bandList, DECO, build3mf, stlGroups, stl, dxfToItems, acrylicDxf, makeCells, loadFile, loadProfile, textItems,
+window.__bukvy = {P, DEF, rebuildSource, buildAll, stackMesh, usageOf, meshVol, drawSnap, snapCfg, snapT, clip, offset, CT, drawDiagram, decoProfile, profileOf, bandList, DECO, build3mf, stlGroups, stl, dxfToItems, acrylicDxf, makeCells, loadFile, loadProfile, textItems,
   select: ids => { selected = new Set(ids); }, get parts(){ return parts; }, get result(){ return result; }, set result(r){ result = r; }, disposeResult};
 
 fillFonts();
