@@ -196,6 +196,12 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
         <div class="bb">
           <label class="f"><span>Лицо</span>
             <select class="in" id="faceMode" data-k="faceMode"><option value="integral">Заодно с бортом — крышка одной деталью</option><option value="separate">Отдельной деталью, в паз борта</option><option value="none">Без лица, буква открыта</option></select></label>
+          <label class="f" data-vis="faceSepStd"><span>Соединение лица с бортом</span>
+            <select class="in" id="faceJoin" data-k="faceJoin"><option value="groove">Паз внутри борта — лицо вкладывается</option><option value="lap">Замок снаружи — паз у борта и у лица (внахлёст)</option></select></label>
+          <div class="g2" data-vis="lap">
+            <label class="f"><span>Ширина замка, мм</span><input class="in" id="lapW" data-k="lapW" inputmode="decimal"></label>
+            <label class="f"><span>Высота замка, мм</span><input class="in" id="lapH" data-k="lapH" inputmode="decimal"></label>
+          </div>
           <div class="g3">
             <label class="f"><span><i class="lt A">A</i> Высота</span><input class="in" id="A" data-k="A" inputmode="decimal"></label>
             <label class="f"><span><i class="lt B">B</i> Стенка</span><input class="in" id="B" data-k="B" inputmode="decimal"></label>
@@ -209,7 +215,7 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
             <select class="in" id="wallType" data-k="wallType"><option value="standard">Стандартный, с пазом</option><option value="ledge">С выступом под лицо</option><option value="custom">Свой профиль из файла</option></select></label>
           <p class="hint" data-vis="grooveOff">Паз не нужен: лицо печатается заодно с бортом.</p>
           <div class="g2" data-vis="grooveOn">
-            <label class="f"><span><i class="lt C">C</i> Глубина паза</span><input class="in" id="C" data-k="C" inputmode="decimal"></label>
+            <label class="f" data-vis="groove"><span><i class="lt C">C</i> Глубина паза</span><input class="in" id="C" data-k="C" inputmode="decimal"></label>
             <label class="f" data-vis="standard"><span>Ширина паза</span><input class="in" id="G" data-k="G" inputmode="decimal"></label>
             <label class="f" data-vis="ledge"><span><i class="lt E">E</i> Выступ</span><input class="in" id="E" data-k="E" inputmode="decimal"></label>
             <label class="f" data-vis="ledge"><span>α Угол скоса, °</span><input class="in" id="alpha" data-k="alpha" inputmode="decimal"></label>
@@ -11673,7 +11679,7 @@ const DEF = {
   scaleW: 394, corner: 'miter', bed: 256,
   wallType: 'standard', A: 40, B: 1.5, C: 3, G: 0.75, E: 2, alpha: 45, matWall: 1,
   stripeOn: false, stripeH: 10, stripeFrom: '', layerH: 0.2, matStripe: 4,
-  faceMode: 'integral', tFace: 1.2, gapFace: 0.15, matFace: 2,
+  faceMode: 'integral', faceJoin: 'groove', lapW: 0.8, lapH: 4, tFace: 1.2, gapFace: 0.15, matFace: 2,
   backMode: 'tray', trayStyle: 'skirt', tBack: 2, lipH: 10, lipW: 1.5, fillet: 2, gapTray: 0.2, matBack: 1,
   relType: 'none', relH: 1.2, relPitch: 6, relMargin: 1,
   patOn: 'face', patMode: 'through', pattern: 'solid', patSize: 12, patRib: 1.2, patFrame: 2, patSeed: 0, matPat: 3,
@@ -11998,6 +12004,14 @@ function profileOf(p, msgs){
   if (B < 0.4){ err('Борт тоньше 0,4 мм не напечатается.'); return null; }
   const rect = {pts: [{r: 0, z: 0}, {r: B, z: 0}, {r: B, z: A}, {r: 0, z: A}], H: A, W: B, kind: 'plain'};
   if (p.faceMode === 'integral') return rect;
+  if (p.faceMode === 'separate' && p.faceJoin === 'lap' && p.wallType !== 'custom'){
+    const w = p.lapW, h = p.lapH, gp = p.gapFace;
+    if (!(w >= 0.4)){ err('Замок: ширина не меньше 0,4 мм.'); return null; }
+    if (!(h >= 1)){ err('Замок: высота не меньше 1 мм.'); return null; }
+    if (B - w - gp < 0.4){ err(`Замок внахлёст: стенка борта должна быть не меньше ${fmt(w + gp + 0.4)} мм (сейчас ${fmt(B)}). Увеличьте стенку B или уменьшите ширину замка.`); return null; }
+    if (h > A - 2){ err('Замок выше борта — уменьшите высоту замка.'); return null; }
+    return {pts: [{r: 0, z: 0}, {r: B, z: 0}, {r: B, z: A}, {r: w + gp, z: A}, {r: w + gp, z: A - h}, {r: 0, z: A - h}], H: A, W: B, kind: 'lap'};
+  }
   if (p.wallType === 'standard'){
     if (!(p.C > 0) || !(p.G > 0)) return rect;
     if (p.C > A - 2){ err('Паз глубже борта — уменьшите C.'); return null; }
@@ -12237,7 +12251,7 @@ function buildAll(p){
   if (fm !== 'none' && p.tFace < 0.4) err('Лицо тоньше 0,4 мм не напечатается.');
   if (bm !== 'none' && p.tBack < 0.4) err('Задник тоньше 0,4 мм не напечатается.');
   const g = fm === 'separate' ? grooveOf(p, prof) : null;
-  if (fm === 'separate' && (!g || g.depth <= 0)) err('Для отдельного лица нужен паз: задайте C больше нуля или выберите «Заодно с бортом».');
+  if (fm === 'separate' && prof.kind !== 'lap' && (!g || g.depth <= 0)) err('Для отдельного лица нужен паз: задайте C больше нуля или выберите «Заодно с бортом».');
   const zBot = bm === 'integral' ? p.tBack : 0, zTop = fm === 'integral' ? H - p.tFace : H;
   if (zTop - zBot < 1) err('Панели толще самого борта — уменьшите толщину лица или задника.');
   const lipOn = p.lipH > 0 && p.lipW > 0;
@@ -12261,7 +12275,7 @@ function buildAll(p){
   let relOn = p.relType !== 'none';
   if (relOn && p.wallType === 'custom'){ warn('Рельеф борта работает только со стандартным и ступенчатым бортом.'); relOn = false; }
   if (relOn && !(p.relH >= 0.4 && p.relPitch >= 2.5 && p.relMargin >= 0)){ err('Рельеф: высота не меньше 0,4 мм, шаг не меньше 2,5 мм.'); return {msgs}; }
-  const zLo = zBot + p.relMargin + (skirt ? pkTop : 0), zHi = zTop - p.relMargin;
+  const zLo = zBot + p.relMargin + (skirt ? pkTop : 0), zHi = zTop - (prof.kind === 'lap' ? p.lapH : 0) - p.relMargin;
   if (relOn && zHi - zLo < p.relPitch * 0.8){ warn('Рельеф не поместился по высоте борта — уменьшите шаг или отступ.'); relOn = false; }
   const bands = bandList(pts, zBot, zTop, (stripe ? [stripe.z1, stripe.z2] : []).concat(skirt ? [pkTop] : []));
   const k = scaleK(), letters = [];
@@ -12306,7 +12320,12 @@ function buildAll(p){
       body.layers.push(...panel(off(ro), off(ri + p.patFrame), H - p.tFace, H, p.matFace, 'face', patTarget === 'face'));
     }
     const pieces = [body];
-    if (fm === 'separate'){
+    if (fm === 'separate' && prof.kind === 'lap'){
+      const lw = p.lapW, zl = H - p.lapH + p.gapFace, lay = panel(A, offset(A, -(lw + p.patFrame), p.corner), H, H + p.tFace, p.matFace, 'face', patTarget === 'face');
+      const ring = toEx(clip(CT.ctDifference, off(0), off(lw)));
+      if (ring.length) lay.push({ex: ring, a: zl, b: H, role: 'face', mat: p.matFace});
+      pieces.push({kind: 'face', flip: true, z0: zl, z1: H + p.tFace, layers: lay});
+    } else if (fm === 'separate'){
       const reg = off(g.rIn + p.gapFace);
       if (reg.length) pieces.push({kind: 'face', flip: true, z0: g.seat, z1: g.seat + p.tFace,
         layers: panel(reg, offset(reg, -p.patFrame, p.corner), g.seat, g.seat + p.tFace, p.matFace, 'face', patTarget === 'face')});
@@ -12349,7 +12368,7 @@ function buildAll(p){
   if (bigOnes) warn(`${bigOnes} ${plural(bigOnes, ['буква больше', 'буквы больше', 'букв больше'])} стола ${fmt(p.bed, 0)} мм — такие буквы придётся резать на части.`);
   const W = (allBB.x1 - allBB.x0) / S, Hh = (allBB.y1 - allBB.y0) / S;
   const R = {p: Object.assign({}, p), msgs, letters, H, W, Hh, stripe, cellsTotal, flipBody,
-    face: fm, back: bm, depth: Math.max(H, g ? g.seat + p.tFace : 0)};
+    face: fm, back: bm, depth: Math.max(H, g ? g.seat + p.tFace : 0, prof.kind === 'lap' ? H + p.tFace : 0)};
   R.pieces = letters.reduce((s, L) => s + L.pieces.length, 0);
   packPieces(R);
   return R;
@@ -12582,7 +12601,8 @@ function drawDiagram(){
   const zoff = skirtSt ? P.tBack : 0;                       // в сборе борт стоит на плите поддона
   const riW = prof.kind === 'custom' ? maxR : (rMax(prof.pts, 0.3) || P.B);
   const notch = false, pkR1 = 0, pkTop = 0;
-  const Htot = Math.max(H + zoff, g ? zoff + g.seat + P.tFace : 0);
+  const lapK = prof.kind === 'lap';
+  const Htot = Math.max(H + zoff, g ? zoff + g.seat + P.tFace : 0, lapK ? H + zoff + P.tFace : 0);
   const k = 225 / Htot;
   const trayR = tray ? (skirtSt ? riW + P.gapTray + (lipOn ? P.lipW : 0) + 0.5 : riW + P.gapTray + (lipOn ? P.lipW : 0) + 0.5) : 0;
   const kx = Math.max(k, Math.min(28, 80 / Math.max(maxR, trayR, 2.5)));
@@ -12614,6 +12634,14 @@ function drawDiagram(){
   if (fm === 'separate' && g){
     s += slab(g.rIn + P.gapFace, zoff + g.seat, zoff + g.seat + P.tFace, cf, true);
     s += T(xFar, Y(zoff + g.seat + P.tFace) - 7, `Лицо D · ${fmt(P.tFace)} мм · зазор ${fmt(P.gapFace)}`, 'var(--dimD)', 'end');
+  }
+  if (lapK){
+    s += slab(0, zoff + H, zoff + H + P.tFace, cf) + rect(0, zoff + H - P.lapH + P.gapFace, P.lapW, zoff + H, cf);
+    s += T(xFar, Y(zoff + H + P.tFace) - 7, `Лицо D · ${fmt(P.tFace)} мм`, 'var(--dimD)', 'end');
+    const yl = Y(zoff + H + P.tFace) + 26;
+    s += lead(rIn - 4, yl - 4, X(P.lapW / 2), Y(zoff + H - P.lapH * 0.55), 'var(--dimD)') + T(rIn, yl, `Замок w · ${fmt(P.lapW)} мм`, 'var(--dimD)');
+    s += lead(rIn - 4, yl + 11, X(P.lapW), Y(zoff + H - P.lapH * 0.2), 'var(--dimD)') + T(rIn, yl + 15, `Замок h · ${fmt(P.lapH)} мм`, 'var(--dimD)');
+    s += lead(rIn - 4, yl + 26, X(P.lapW + P.gapFace / 2), Y(zoff + H - P.lapH * 0.8), cG) + T(rIn, yl + 30, `Зазор · ${fmt(P.gapFace)} мм`, cG);
   }
   // --- задник
   if (bm === 'integral'){ s += slab(0, 0, P.tBack, cb); s += lead(rIn - 4, Y(0) + 13, X(maxR) + 12, Y(P.tBack / 2), cT) + T(rIn, Y(0) + 17, `Задник T · ${fmt(P.tBack)} мм`, cT); }
@@ -12740,7 +12768,8 @@ function textItems(msgs){
 let fileItems = null, fileLabel = '', needFit = true, timer = null, srcTimer = null, srcMsgs = [];
 const VIS = {
   srcText: () => P.src === 'text', srcFile: () => P.src === 'file',
-  standard: () => P.wallType === 'standard', ledge: () => P.wallType === 'ledge', custom: () => P.wallType === 'custom',
+  lap: () => P.faceMode === 'separate' && P.faceJoin === 'lap' && P.wallType !== 'custom', groove: () => !(P.faceMode === 'separate' && P.faceJoin === 'lap' && P.wallType !== 'custom'), faceSepStd: () => P.faceMode === 'separate' && P.wallType !== 'custom',
+  standard: () => P.wallType === 'standard' && !(P.faceMode === 'separate' && P.faceJoin === 'lap'), ledge: () => P.wallType === 'ledge' && !(P.faceMode === 'separate' && P.faceJoin === 'lap'), custom: () => P.wallType === 'custom',
   grooveOn: () => P.wallType !== 'custom' && P.faceMode !== 'integral', grooveOff: () => P.wallType !== 'custom' && P.faceMode === 'integral',
   rel: () => P.relType !== 'none', stripe: () => P.stripeOn, face: () => P.faceMode !== 'none', faceSep: () => P.faceMode === 'separate',
   back: () => P.backMode !== 'none', tray: () => P.backMode === 'tray',
