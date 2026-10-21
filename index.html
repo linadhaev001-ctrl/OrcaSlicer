@@ -12139,39 +12139,60 @@ function decoLine(type, z1, z2, N, e, up, step){
     for (let k = 0; k < N; k++){ const s0 = z1 + k * L + (L - b) / 2; add(s0, 0); add(s0 + c, e); add(s0 + c + top, e); add(s0 + b, 0); }
     add(z2, 0);
   } else if (type === 'shingle'){
-    // скат черепицы развёрнут под печать: каждый ряд расширяется вверх по ходу печати, сверху ряда — ровная полочка
-    const L = Z / N;
-    for (let k = 0; k < N; k++){
-      const za = z1 + k * L, zb = za + L;
-      if (up){ add(za, 0); add(zb, e); add(zb, 0); }
-      else { add(za, 0); add(za, e); add(zb, 0); }
-    }
+    // черепица: низ каждого ряда выходит наружу под 45°, дальше ряд пологим скатом уходит к стене
+    const L = Z / N, c = Math.min(e, L / 2);
+    for (let k = 0; k < N; k++){ const za = z1 + k * L; add(za, 0); add(za + c, e); add(za + L, 0); }
   }
   return out;
 }
-// профиль борта с фигурной наружной стороной; null — борт ровный
+// фигурный борт — пустая оболочка одной толщины B: внутренняя сторона повторяет наружную,
+// поэтому слайсер печатает его одними стенками, без заполнения. Скаты не круче 45° — вылет ограничивается сам.
+// Где в борт заходит юбка или поддон и где паз/полка под лицо — борт остаётся ровным.
+function decoZone(p, prof, zBot, zTop){
+  const pts = prof.pts, n = pts.length, last = pts[n - 1];
+  if (n < 4 || Math.abs(pts[0].r) > 1e-9 || Math.abs(pts[0].z) > 1e-9 || Math.abs(last.r) > 1e-9) return null;
+  if (Math.abs(pts[1].z) > 1e-9 || Math.abs(pts[2].r - pts[1].r) > 1e-9) return null;
+  const B = pts[1].r, lipOn = p.lipH > 0 && p.lipW > 0, pad = Math.max(0, p.decoPad || 0);
+  let lo = zBot;
+  if (p.backMode === 'tray') lo = Math.max(lo, p.trayStyle === 'skirt' ? (lipOn ? p.lipH + 0.5 : 0) : p.tBack + (lipOn ? p.lipH : 0) + 0.5);
+  const hi = Math.min(last.z, zTop, pts[2].z);
+  return {B, z1: lo + pad, z2: hi - pad, lo, hi};
+}
 function decoProfile(p, prof, zBot, zTop, flip, msgs){
   const t = p.decoType;
   if (!t || t === 'none' || !DECO[t]) return null;
   const warn = m => msgs.push({t: 'warn', m}), err = m => msgs.push({t: 'err', m});
-  if (prof.kind === 'custom'){ warn('Фигурный борт не делается со своим профилем из файла — форма задаётся самим файлом.'); return null; }
-  const e = p.decoE, N = Math.max(1, Math.round(p.decoN || 1)), pad = Math.max(0, p.decoPad || 0);
-  if (!(e >= 0.3)){ err('Фигурный борт: вылет наружу — не меньше 0,3 мм.'); return null; }
-  if (e > 30){ err('Фигурный борт: вылет больше 30 мм — слишком много.'); return null; }
-  const pts = prof.pts, n = pts.length, last = pts[n - 1];
-  if (!(Math.abs(pts[0].r) < 1e-9 && Math.abs(pts[0].z) < 1e-9 && Math.abs(last.r) < 1e-9)) return null;
-  const z1 = zBot + pad, z2 = Math.min(last.z, zTop) - pad, Z = z2 - z1;
-  if (Z < 4){ warn('Фигурный борт не поместился по высоте — уменьшите отступ у краёв.'); return null; }
-  if (t !== 'barrel' && Z / N < 2){ warn(`Фигурный борт: ${N} шт. на ${fmt(Z)} мм — слишком часто, уменьшите количество.`); return null; }
-  const line = decoLine(t, z1, z2, t === 'barrel' ? 1 : N, e, !flip, p.__fine ? 0.15 : 0.25);
-  let s = 0;
-  for (let i = 1; i < line.length; i++){ const dz = line[i].z - line[i - 1].z; if (dz > 1e-7) s = Math.max(s, Math.abs(line[i].d - line[i - 1].d) / dz); }
-  if (s > 1.0001) warn(`${DECO[t]}: скат ${fmt(Math.atan(s) * 180 / Math.PI, 0)}° от вертикали — круче 45°, под него понадобятся поддержки. Уменьшите вылет${t === 'barrel' ? '' : ' или количество'}.`);
-  const out = pts.slice();
-  if (z2 < last.z - 1e-7) out.push({r: 0, z: z2});
-  for (let i = line.length - 1; i >= 0; i--){ const q = {r: -line[i].d, z: line[i].z}, l = out[out.length - 1]; if (Math.abs(l.r - q.r) > 1e-7 || Math.abs(l.z - q.z) > 1e-7) out.push(q); }
-  if (out[out.length - 1].z > 1e-7 && Math.abs(out[out.length - 1].r) > 1e-7) out.push({r: 0, z: z1});
-  return {pts: out, out: Math.max(...line.map(q => q.d)), type: t, N, e, z1, z2, s, line};
+  if (prof.kind === 'custom') return null;
+  const e0 = p.decoE, N = t === 'barrel' ? 1 : Math.max(1, Math.round(p.decoN || 1));
+  if (!(e0 >= 0.3)){ err('Фигурный борт: вылет наружу — не меньше 0,3 мм.'); return null; }
+  if (e0 > 30){ err('Фигурный борт: вылет больше 30 мм — слишком много.'); return null; }
+  const zn = decoZone(p, prof, zBot, zTop); if (!zn) return null;
+  const {B, z1, z2} = zn, Z = z2 - z1, pts = prof.pts;
+  if (Z < 4){ warn(`Фигурный борт не поместился: ровными должны остаться ${fmt(zn.lo)} мм снизу (юбка/поддон) и паз сверху — по высоте осталось ${fmt(Math.max(0, zn.hi - zn.lo))} мм. Увеличьте высоту борта или уменьшите отступ у краёв.`); return null; }
+  if (Z / N < 2){ warn(`Фигурный борт: ${N} шт. на ${fmt(Z)} мм — слишком часто, уменьшите количество.`); return null; }
+  const step = p.__fine ? 0.15 : 0.25;
+  const slope = line => { let s = 0; for (let i = 1; i < line.length; i++){ const dz = line[i].z - line[i - 1].z; if (dz > 1e-7) s = Math.max(s, Math.abs(line[i].d - line[i - 1].d) / dz); } return s; };
+  // наклон не круче 45°: если надо — уменьшаем вылет (поиск делением пополам)
+  let e = e0, line = decoLine(t, z1, z2, N, e, !flip, step);
+  if (slope(line) > 1.0001){
+    let a = 0, b = e0;
+    for (let i = 0; i < 30; i++){ const m = (a + b) / 2; if (slope(decoLine(t, z1, z2, N, m, !flip, 0.05)) > 1.0001) b = m; else a = m; }
+    e = Math.floor(a * 100) / 100; line = decoLine(t, z1, z2, N, e, !flip, step);
+    if (e < 0.3){ warn(`${DECO[t]}: при ${N} шт. на ${fmt(Z)} мм скат круче 45° даже при малом вылете — уменьшите количество.`); return null; }
+    warn(`${DECO[t]}: вылет уменьшен с ${fmt(e0)} до ${fmt(e)} мм, чтобы скат был не круче 45° — печать без поддержек.${t === 'barrel' ? '' : ' Больше вылет — меньше количество.'}`);
+  }
+  // контур профиля: низ → внутренняя сторона (B − d) → остальной профиль (паз, полка) → наружная сторона (−d) вниз
+  const out = [];
+  const push = (r, z) => { const l = out[out.length - 1]; if (!l || Math.abs(l.r - r) > 1e-7 || Math.abs(l.z - z) > 1e-7) out.push({r, z}); };
+  push(pts[0].r, pts[0].z); push(B, 0); push(B, z1);
+  for (const q of line) push(B - q.d, q.z);
+  push(B, z2);
+  for (let i = 2; i < pts.length; i++) push(pts[i].r, pts[i].z);
+  push(0, z2);
+  for (let i = line.length - 1; i >= 0; i--) push(-line[i].d, line[i].z);
+  push(0, z1);
+  if (Math.abs(out[out.length - 1].r) < 1e-7 && Math.abs(out[out.length - 1].z) < 1e-7) out.pop();
+  return {pts: out, out: Math.max(...line.map(q => q.d)), type: t, N, e, e0, z1, z2, B, line};
 }
 function scan(pts, z){
   const xs = [], n = pts.length;
@@ -12708,7 +12729,7 @@ async function build3mf(){
     ensurePrinted(pc, R);
     const byMat = new Map();
     for (const l of pc.layers){ if (!byMat.has(l.mat)) byMat.set(l.mat, []); byMat.get(l.mat).push(l.pg); }
-    objs.push({name: `Буква ${L.index} — ${KIND_RU[pc.kind]}`, parts: [...byMat].map(([mat, geoms]) => ({name: `${KIND_RU[pc.kind]} · пластик ${mat}`, ext: mat, geoms}))});
+    objs.push({shell: !!(R.deco && pc.kind === 'body'), name: `Буква ${L.index} — ${KIND_RU[pc.kind]}`, parts: [...byMat].map(([mat, geoms]) => ({name: `${KIND_RU[pc.kind]} · пластик ${mat}`, ext: mat, geoms}))});
   }
   let id = 1; const res = [], items = [], cfg = [];
   for (const o of objs){
@@ -12722,7 +12743,9 @@ async function build3mf(){
     const oid = id++;
     res.push(`<object id="${oid}" type="model" name="${xesc(o.name)}"><components>${comps.join('')}</components></object>`);
     items.push(`<item objectid="${oid}" transform="1 0 0 0 1 0 0 0 1 0 0 0"/>`);
-    cfg.push(`  <object id="${oid}">\n    <metadata key="name" value="${xesc(o.name)}"/>\n    <metadata key="extruder" value="${o.parts[0].ext}"/>\n${pcfg.join('\n')}\n  </object>`);
+    // фигурный борт — пустая оболочка: 4 стенки на объект, чтобы борт 1–2 мм печатался одними стенками, без заполнения (панели лица/задника остаются сплошными)
+    const shellCfg = o.shell ? `    <metadata key="wall_loops" value="4"/>\n` : '';
+    cfg.push(`  <object id="${oid}">\n    <metadata key="name" value="${xesc(o.name)}"/>\n    <metadata key="extruder" value="${o.parts[0].ext}"/>\n${shellCfg}${pcfg.join('\n')}\n  </object>`);
   }
   const z = new JSZip();
   z.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/><Default Extension="config" ContentType="text/xml"/></Types>');
@@ -12906,7 +12929,7 @@ function renderResult(fit){
 /* ================= схема борта и образец узора ================= */
 function drawDiagram(){
   const box = $('diagram'); if (!box) return;
-  const msgs = [], prof = profileOf(P, msgs), Wv = 340, Hv = 470;
+  const msgs = [], prof = profileOf(P, msgs), Wv = 340, Hv = 492;
   if (!prof){ box.innerHTML = `<svg viewBox="0 0 ${Wv} ${Hv}" role="img" aria-label="Схема борта"><text x="170" y="180" text-anchor="middle" class="dm">${P.wallType === 'custom' ? 'Загрузите файл профиля' : 'Проверьте размеры борта'}</text></svg>`; return; }
   const H = prof.H, maxR = Math.max(...prof.pts.map(q => q.r));
   const fm = P.faceMode, bm = P.backMode, tray = bm === 'tray';
@@ -12999,8 +13022,9 @@ function drawDiagram(){
   if (deco){
     yb += 22;
     s += hd(yb, minR, 0, cS);
-    s += T(X(minR), yb + 20, `${DECO[deco.type]}${deco.type === 'barrel' ? '' : ' × ' + deco.N} · вылет ${fmt(deco.out)} мм наружу`, cS);
-    yb += 20;
+    s += T(X(minR), yb + 20, `${DECO[deco.type]}${deco.type === 'barrel' ? '' : ' × ' + deco.N} · вылет ${fmt(deco.out)} мм`, cS);
+    s += T(X(minR), yb + 36, `пустой, стенка ${fmt(deco.B)} мм везде · скат ≤ 45°`, cS, null, false);
+    yb += 36;
   }
   if (tray && lipOn){
     const a = skirtSt ? pkR1 : riW, gp = P.gapTray, w = P.lipW, base = skirtSt ? 0 : riW;
@@ -13033,9 +13057,10 @@ function drawDiagram(){
 }
 // значок формы борта: разрез стенки, снаружи — слева
 function decoIcon(t){
-  const W = 34, H = 44, xi = 25, xo = 15, kz = 40, e = 8;
+  const W = 34, H = 44, xo = 19, wd = 5, kz = 40, e = t === 'barrel' ? 9 : 7;
   const line = t === 'none' ? [{z: 0, d: 0}, {z: 1, d: 0}] : decoLine(t, 0, 1, t === 'barrel' ? 1 : 2, 1, true);
-  const pts = [`${xi},${H - 2}`, `${xi},2`].concat(line.slice().reverse().map(q => `${(xo - q.d * e).toFixed(1)},${(H - 2 - q.z * kz).toFixed(1)}`));
+  const P2 = (q, dx) => `${(xo + dx - q.d * e).toFixed(1)},${(H - 2 - q.z * kz).toFixed(1)}`;
+  const pts = line.map(q => P2(q, wd)).concat(line.slice().reverse().map(q => P2(q, 0)));
   return `<svg class="ic" viewBox="0 0 ${W} ${H}" aria-hidden="true"><line class="base" x1="${xo}" y1="1" x2="${xo}" y2="${H - 1}"/><polygon class="w" points="${pts.join(' ')}"/></svg>`;
 }
 function pathD(paths, flipH){ return paths.map(pth => 'M' + pth.map(q => (q.X / S).toFixed(2) + ' ' + (flipH - q.Y / S).toFixed(2)).join('L') + 'Z').join(''); }
@@ -13180,8 +13205,8 @@ function refreshUI(){
   document.querySelectorAll('[data-pat]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pat === P.pattern)));
   document.querySelectorAll('[data-deco]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.deco === P.decoType)));
   { const lb = $('decoNLbl'); if (lb) lb.textContent = {pillows: 'Сколько подушек', wave: 'Сколько волн', zigzag: 'Сколько зубцов', ribs: 'Сколько рёбер', shingle: 'Сколько рядов'}[P.decoType] || 'Сколько, шт';
-    const nt = $('decoNote'); if (nt) nt.textContent = P.decoType === 'none' ? '' : 'Наружная сторона борта выгибается наружу, внутренняя остаётся ровной — паз, юбка, полка под акрил и замок не меняются. Буква по борту станет шире на два вылета. '
-      + (P.decoType === 'shingle' ? 'Ряды черепицы развёрнуты так, чтобы борт печатался без поддержек.' : P.decoType === 'zigzag' && Math.round(P.decoN) === 2 ? 'Два зубца — линия «М» сбоку.' : 'Скаты до 45° печатаются без поддержек.'); }
+    const nt = $('decoNote'); if (nt) nt.textContent = P.decoType === 'none' ? '' : 'Борт — пустая оболочка одной толщины B: внутренняя сторона повторяет наружную, слайсер печатает его одними стенками, без заполнения. Скаты не круче 45° — если вылет слишком большой, он уменьшится сам. Снизу на высоту юбки поддона и сверху у паза борт остаётся ровным. Буква по борту станет шире на два вылета.'
+      + (P.decoType === 'zigzag' && Math.round(P.decoN) === 2 ? ' Два зубца — линия «М» сбоку.' : ''); }
   $('seedLbl').textContent = 'Вариант узора · ' + P.patSeed;
   $('acrOn').checked = P.faceMode === 'acrylic';
   $('pvcOn').checked = P.backMode === 'pvc';
