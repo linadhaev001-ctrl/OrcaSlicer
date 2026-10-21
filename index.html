@@ -86,6 +86,15 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
 .in:disabled{background:var(--soft);color:var(--muted)}
 .g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .g2>.wide{grid-column:1/-1}
+.presets{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.presets .ml{font-size:14px;color:var(--muted);margin-right:4px}
+.presets .btn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.acrcorner{border:1px solid var(--line);border-radius:10px;background:var(--soft);padding:6px}
+.acrcorner svg{width:100%;height:auto;max-height:190px;display:block}
+.acrcorner text{font:12px var(--f-body);fill:var(--fg)}
+.acrview{border:1px solid var(--line);border-radius:10px;background:var(--view);padding:10px;min-height:60px}
+.acrview svg{width:100%;height:auto;max-height:240px;display:block}
+.acrview .empty{color:var(--muted);font-size:13.5px;text-align:center;padding:16px 0}
 .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 @media (max-width:420px){.g3{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .check{display:flex;gap:9px;align-items:center;cursor:pointer;font-size:15px}
@@ -202,7 +211,7 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
         <summary><span class="dot" id="dotTop"></span><span class="bt"><b>Крышка: борт и лицо</b><small id="sTop"></small></span><span class="chev"></span></summary>
         <div class="bb">
           <label class="f"><span>Лицо</span>
-            <select class="in" id="faceMode" data-k="faceMode"><option value="integral">Заодно с бортом — крышка одной деталью</option><option value="separate">Отдельной деталью, в паз борта</option><option value="none">Без лица, буква открыта</option></select></label>
+            <select class="in" id="faceMode" data-k="faceMode"><option value="acrylic">Акрил в паз борта — режется на ЧПУ, отдаётся DXF</option><option value="integral">Заодно с бортом — крышка одной деталью</option><option value="separate">Отдельной деталью, в паз борта</option><option value="none">Без лица, буква открыта</option></select></label>
           <label class="f" data-vis="faceSepStd"><span>Соединение лица с бортом</span>
             <select class="in" id="faceJoin" data-k="faceJoin"><option value="groove">Паз внутри борта — лицо вкладывается</option><option value="lap">Замок снаружи — паз у борта и у лица (внахлёст)</option></select></label>
           <div class="g2" data-vis="lap">
@@ -217,9 +226,10 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
           <div class="diagram" id="diagram"></div>
           <div class="mat"><span class="ml">Пластик борта</span><div class="chips" data-chips="matWall"></div></div>
           <div class="mat" data-vis="face"><span class="ml">Пластик лица</span><div class="chips" data-chips="matFace"></div></div>
-          <div class="sub">Профиль борта</div>
-          <label class="f"><span>Тип борта</span>
+          <div class="sub" data-vis="notAcr">Профиль борта</div>
+          <label class="f" data-vis="notAcr"><span>Тип борта</span>
             <select class="in" id="wallType" data-k="wallType"><option value="standard">Стандартный, с пазом</option><option value="ledge">С выступом под лицо</option><option value="custom">Свой профиль из файла</option></select></label>
+          <p class="hint" data-vis="acr">Профиль борта задаётся в блоке «Лицо из акрила»: паз под акрил с углами, скруглёнными под фрезу.</p>
           <p class="hint" data-vis="grooveOff">Паз не нужен: лицо печатается заодно с бортом.</p>
           <div class="g2" data-vis="grooveOn">
             <label class="f" data-vis="groove"><span><i class="lt C">C</i> Глубина паза</span><input class="in" id="C" data-k="C" inputmode="decimal"></label>
@@ -229,6 +239,26 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
             <label class="f" data-vis="faceSep"><span>Зазор лица</span><input class="in" id="gapFace" data-k="gapFace" inputmode="decimal"></label>
           </div>
           <label class="drop" id="dropProf" data-vis="custom"><span class="dt"><b>Боковой профиль</b><small id="profInfo">SVG или DXF с одним замкнутым контуром. Снаружи — слева, низ — внизу, размеры в мм.</small></span><span class="pill">Выбрать</span><input type="file" id="fileProf" accept=".svg,.dxf,image/svg+xml"></label>
+        </div>
+      </details>
+
+      <details class="blk" id="blkAcr">
+        <summary><span class="dot" style="--c:#dfe9f2"></span><span class="bt"><b>Лицо из акрила (ЧПУ)</b><small id="sAcr"></small></span><span class="chev"></span></summary>
+        <div class="bb">
+          <label class="check"><input type="checkbox" id="acrOn"> Лицо из акрила — вклеивается в паз борта</label>
+          <p class="hint">Акрил режется фрезой, поэтому его внутренние углы получаются скруглёнными по радиусу фрезы. Паз в борту скругляется так же — акрил встаёт без подгонки. Лицо скачивается отдельным DXF в кривых, по чистовому контуру детали (коррекцию на фрезу задаёт программа станка).</p>
+          <div class="g2" data-vis="acr">
+            <label class="f"><span>Толщина акрила, мм</span><input class="in" id="acrT" data-k="acrT" inputmode="decimal"></label>
+            <label class="f"><span>Глубина паза, мм</span><input class="in" id="acrC" data-k="acrC" inputmode="decimal"></label>
+            <label class="f"><span>Заход на борт, мм</span><input class="in" id="acrG" data-k="acrG" inputmode="decimal"></label>
+            <label class="f"><span>Зазор в пазу, мм</span><input class="in" id="acrGap" data-k="acrGap" inputmode="decimal"></label>
+            <label class="f wide"><span>Диаметр фрезы, мм (обычно 1–9)</span><input class="in" id="acrD" data-k="acrD" inputmode="decimal"></label>
+          </div>
+          <div class="presets" data-vis="acr"><span class="ml">Частые фрезы</span><button type="button" class="btn sm" data-acrd="1">1</button><button type="button" class="btn sm" data-acrd="2">2</button><button type="button" class="btn sm" data-acrd="3.175">3,175</button><button type="button" class="btn sm" data-acrd="4">4</button><button type="button" class="btn sm" data-acrd="6">6</button><button type="button" class="btn sm" data-acrd="8">8</button></div>
+          <div class="acrcorner" id="acrCorner" data-vis="acr"></div>
+          <div class="acrview" id="acrView" data-vis="acr"></div>
+          <p class="hint" id="acrNote" data-vis="acr"></p>
+          <button type="button" class="btn primary" id="btnDxf" data-vis="acr">Скачать DXF акрила для ЧПУ</button>
         </div>
       </details>
 
@@ -11683,7 +11713,7 @@ const DEF = {
   scaleW: 394, corner: 'miter', bed: 256,
   wallType: 'standard', A: 40, B: 1.5, C: 3, G: 0.75, E: 2, alpha: 45, matWall: 1,
   stripeOn: false, stripeH: 10, stripeFrom: '', layerH: 0.2, matStripe: 4,
-  faceMode: 'integral', faceJoin: 'groove', lapW: 0.8, lapH: 4, tFace: 1.2, gapFace: 0.15, matFace: 2,
+  faceMode: 'integral', faceJoin: 'groove', acrT: 3, acrC: 3, acrG: 0.8, acrGap: 0.2, acrD: 3.175, lapW: 0.8, lapH: 4, tFace: 1.2, gapFace: 0.15, matFace: 2,
   backMode: 'tray', trayStyle: 'skirt', tBack: 2, lipH: 10, lipW: 1.5, fillet: 2, gapTray: 0.2, matBack: 1,
   relType: 'none', relH: 1.2, relPitch: 6, relMargin: 1,
   patOn: 'face', patMode: 'through', pattern: 'solid', patSize: 12, patRib: 1.2, patFrame: 2, patSeed: 0, matPat: 3,
@@ -11717,6 +11747,8 @@ function treeEx(type, a, b){
   return CL.JS.PolyTreeToExPolygons(tree);
 }
 const toEx = paths => treeEx(CT.ctUnion, paths);
+// «закрытие» кругом радиуса r: так фреза оставляет материал во внутренних углах детали — они скругляются по радиусу фрезы
+const closing = (paths, r) => r > 1e-6 ? offset(offset(paths, r, 'round'), -r, 'round') : paths;
 const diffEx = (a, b) => treeEx(CT.ctDifference, a, b);
 function offset(paths, d, join){
   if (!paths.length) return [];
@@ -12018,6 +12050,14 @@ function profileOf(p, msgs){
     if (h > A - 2){ err('Замок выше борта — уменьшите высоту замка.'); return null; }
     return {pts: [{r: 0, z: 0}, {r: B, z: 0}, {r: B, z: A}, {r: w + gp, z: A}, {r: w + gp, z: A - h}, {r: 0, z: A - h}], H: A, W: B, kind: 'lap'};
   }
+  if (p.faceMode === 'acrylic'){
+    if (p.wallType === 'custom'){ err('Для лица из акрила выберите стандартный тип борта — свой профиль здесь не поддерживается.'); return null; }
+    const C = p.acrC, G = p.acrG;
+    if (!(C > 0) || !(G > 0)){ err('Акрил: глубина паза и заход на борт должны быть больше нуля.'); return null; }
+    if (C > A - 2){ err('Паз под акрил глубже борта — уменьшите глубину паза.'); return null; }
+    if (B - G < 0.4){ err(`Над пазом под акрил остаётся ${fmt(B - G)} мм стенки, нужно не меньше 0,4 мм. Увеличьте стенку B или уменьшите заход акрила.`); return null; }
+    return {pts: [{r: 0, z: 0}, {r: B, z: 0}, {r: B, z: A - C}, {r: B - G, z: A - C}, {r: B - G, z: A}, {r: 0, z: A}], H: A, W: B, kind: 'acrylic'};
+  }
   if (p.wallType === 'standard'){
     if (!(p.C > 0) || !(p.G > 0)) return rect;
     if (p.C > A - 2){ err('Паз глубже борта — уменьшите C.'); return null; }
@@ -12048,6 +12088,7 @@ function scan(pts, z){
 const rMin = (pts, z) => { const iv = scan(pts, z); return iv.length ? iv[0][0] : null; };
 const rMax = (pts, z) => { const iv = scan(pts, z); return iv.length ? iv[iv.length - 1][1] : null; };
 function grooveOf(p, prof){
+  if (prof.kind === 'acrylic') return {rIn: p.B - p.acrG, seat: p.A - p.acrC, depth: p.acrC};
   if (prof.kind === 'standard') return {rIn: p.B - p.G, seat: p.A - p.C, depth: p.C};
   if (prof.kind === 'ledge') return {rIn: p.B, seat: p.A - Math.max(0, p.C), depth: Math.max(0, p.C)};
   if (prof.kind === 'custom'){ const r = rMax(prof.pts, prof.H - 0.01); return r == null ? null : {rIn: r, seat: prof.H - p.tFace, depth: p.tFace, custom: true}; }
@@ -12284,7 +12325,12 @@ function* buildGen(p){
   if (fm === 'integral' && bm === 'integral') err('Лицо и задник заодно с бортом дают закрытую коробку — её не напечатать. Сделайте одну из панелей отдельной деталью.');
   if (fm !== 'none' && p.tFace < 0.4) err('Лицо тоньше 0,4 мм не напечатается.');
   if (bm !== 'none' && p.tBack < 0.4) err('Задник тоньше 0,4 мм не напечатается.');
-  const g = fm === 'separate' ? grooveOf(p, prof) : null;
+  const g = fm === 'separate' || fm === 'acrylic' ? grooveOf(p, prof) : null;
+  if (fm === 'acrylic'){
+    if (!(p.acrD >= 0.5 && p.acrD <= 12)) err('Диаметр фрезы — от 0,5 до 12 мм.');
+    if (!(p.acrT >= 0.5)) err('Толщина акрила — не меньше 0,5 мм.');
+    if (!(p.acrGap >= 0)) err('Зазор акрила не может быть отрицательным.');
+  }
   if (fm === 'separate' && prof.kind !== 'lap' && (!g || g.depth <= 0)) err('Для отдельного лица нужен паз: задайте C больше нуля или выберите «Заодно с бортом».');
   const zBot = bm === 'integral' ? p.tBack : 0, zTop = fm === 'integral' ? H - p.tFace : H;
   if (zTop - zBot < 1) err('Панели толще самого борта — уменьшите толщину лица или задника.');
@@ -12296,13 +12342,17 @@ function* buildGen(p){
   if (foot > 0.001) warn(`Юбка шире борта: у основания остаётся наружная стенка ${fmt(pkR1)} мм, юбка частично выходит внутрь за борт.`);
   if (skirt && lipOn && p.lipH > (g ? g.seat : zTop) - 0.5) err('Юбка выше места под лицо — уменьшите высоту бортика.');
   if (hasErr()) return {msgs};
-  if (g && p.tFace > g.depth + 0.01 && !g.custom) warn(`Лицо толще паза и выступит над бортом на ${fmt(p.tFace - g.depth)} мм.`);
+  if (fm === 'acrylic' && g){
+    if (p.acrT > g.depth + 0.01) warn(`Акрил толще паза и выступит над бортом на ${fmt(p.acrT - g.depth)} мм.`);
+    if (p.B - p.acrG < 0.8) warn(`Над пазом остаётся ${fmt(p.B - p.acrG)} мм стенки — на скруглениях паза она может прорезаться. Для акрила лучше стенка B от 2 мм.`);
+  }
+  if (fm !== 'acrylic' && g && p.tFace > g.depth + 0.01 && !g.custom) warn(`Лицо толще паза и выступит над бортом на ${fmt(p.tFace - g.depth)} мм.`);
 
   const flipBody = fm === 'integral';
   const stripe = stripeOf(p, H, zBot, zTop, flipBody, msgs);
   let patTarget = null;
   if (p.pattern !== 'solid'){
-    if (p.patOn === 'face' && fm !== 'none') patTarget = 'face';
+    if (p.patOn === 'face' && fm !== 'none' && fm !== 'acrylic') patTarget = 'face';
     else if (p.patOn === 'back' && bm !== 'none') patTarget = 'back';
     else warn('Узор не наложен: на выбранной панели нет детали.');
   }
@@ -12326,14 +12376,18 @@ function* buildGen(p){
     if (ck && letterCache.has(ck)){
       const c = letterCache.get(ck);
       msgs.push(...c.msgs); cellsTotal += c.cells; if (c.empty) emptyInside = true;
-      letters.push({index: li + 1, w: c.L.w, h: c.L.h, pieces: c.L.pieces.map(pc => ({kind: pc.kind, flip: pc.flip, z0: pc.z0, z1: pc.z1, pad: pc.pad,
+      letters.push({index: li + 1, w: c.L.w, h: c.L.h, pieces: c.L.pieces.map(pc => ({kind: pc.kind, flip: pc.flip, z0: pc.z0, z1: pc.z1, pad: pc.pad, noPrint: pc.noPrint, outline: pc.outline,
         layers: pc.layers.map(l => Object.assign({}, l, {mat: p[MATK[l.role]] || l.mat}))}))});
       continue;
     }
     const m0 = msgs.length, c0 = cellsTotal, e0 = emptyInside;
     const cache = new Map();
+    let acrPocket = null;
     const off = r => { if (r < 1e-6) return A; const key = r.toFixed(4); if (!cache.has(key)) cache.set(key, offset(A, -r, p.corner)); return cache.get(key); };
     const ring = iv => { let ps = []; for (const [r1, r2] of iv) ps = ps.concat(clip(CT.ctDifference, off(r1), off(r2))); return toEx(ps); };
+    if (fm === 'acrylic') acrPocket = closing(off(g.rIn), p.acrD / 2);
+    // пояс паза под акрил: внутренняя граница борта — скруглённый паз, а не ровный отступ
+    const ringP = iv => { const mx = Math.max(...iv.map(q => q[1])); let ps = []; for (const [r1, r2] of iv) ps = ps.concat(clip(CT.ctDifference, off(r1), r2 >= mx - 1e-9 ? acrPocket : off(r2))); return toEx(ps); };
     const panel = (region, I, a, b, mat, role, usePat) => {
       const cells = usePat ? makeCells(I, p, msgs) : null;
       if (!cells) return [{ex: toEx(region), a, b, role, mat}];
@@ -12346,7 +12400,7 @@ function* buildGen(p){
     for (const bd of bands){
       let ivs = bd.iv;
       if (skirt && (bd.a + bd.b) / 2 < pkTop){ if (foot > 0){ let mi = 0; ivs.forEach((q, i) => { if (q[1] > ivs[mi][1]) mi = i; }); ivs = ivs.map((q, i) => i === mi ? [q[0], q[1] + foot] : q); } const o = []; for (const [r1, r2] of ivs){ if (pkR1 >= r2 || riB <= r1) o.push([r1, r2]); else { if (pkR1 > r1) o.push([r1, pkR1]); if (riB < r2) o.push([riB, r2]); } } ivs = o; }
-      const ex = ring(ivs); if (!ex.length) continue;
+      const ex = acrPocket && bd.a >= g.seat - 1e-6 ? ringP(ivs) : ring(ivs); if (!ex.length) continue;
       const inStripe = stripe && bd.a >= stripe.z1 - 1e-6 && bd.b <= stripe.z2 + 1e-6;
       body.layers.push({ex, a: bd.a, b: bd.b, role: inStripe ? 'stripe' : 'wall', mat: inStripe ? p.matStripe : p.matWall});
     }
@@ -12371,6 +12425,11 @@ function* buildGen(p){
       const ring = toEx(clip(CT.ctDifference, off(0), off(lw)));
       if (ring.length) lay.push({ex: ring, a: zl, b: H, role: 'face', mat: p.matFace});
       pieces.push({kind: 'face', flip: true, z0: zl, z1: H + p.tFace, layers: lay});
+    } else if (fm === 'acrylic'){
+      const ex = toEx(offset(acrPocket, -p.acrGap, 'round'));
+      if (ex.length) pieces.push({kind: 'acrylic', flip: false, noPrint: true, z0: g.seat, z1: g.seat + p.acrT, outline: ex.flatMap(e => [e.outer].concat(e.holes)),
+        layers: [{ex, a: g.seat, b: g.seat + p.acrT, role: 'acrylic', mat: 'acr'}]});
+      else warn(`Буква ${li + 1}: акрил слишком узкий и пропал.`);
     } else if (fm === 'separate'){
       const reg = off(g.rIn + p.gapFace);
       if (reg.length) pieces.push({kind: 'face', flip: true, z0: g.seat, z1: g.seat + p.tFace,
@@ -12416,15 +12475,15 @@ function* buildGen(p){
   if (bigOnes) warn(`${bigOnes} ${plural(bigOnes, ['буква больше', 'буквы больше', 'букв больше'])} стола ${fmt(p.bed, 0)} мм — такие буквы придётся резать на части.`);
   const W = (allBB.x1 - allBB.x0) / S, Hh = (allBB.y1 - allBB.y0) / S;
   const R = {p: Object.assign({}, p), msgs, letters, H, W, Hh, stripe, cellsTotal, flipBody,
-    face: fm, back: bm, depth: Math.max(H, g ? g.seat + p.tFace : 0, prof.kind === 'lap' ? H + p.tFace : 0)};
-  R.pieces = letters.reduce((s, L) => s + L.pieces.length, 0);
+    face: fm, back: bm, depth: Math.max(H, g ? g.seat + (fm === 'acrylic' ? p.acrT : p.tFace) : 0, prof.kind === 'lap' ? H + p.tFace : 0)};
+  R.pieces = letters.reduce((s, L) => s + L.pieces.filter(pc => !pc.noPrint).length, 0);
   packPieces(R);
   return R;
 }
 // раскладка деталей по столам: «первая подходящая полка» — крупные сначала, каждую кладём на первую полку, где хватает места
 function packPieces(R){
   const bed = R.p.bed, m = 5, gap = 6, list = [], plates = [];
-  for (const L of R.letters) for (const pc of L.pieces){ pc.bb = bboxOf(pc.layers.flatMap(l => l.ex.map(e => e.outer))); if (pc.pad){ const d = Math.round(pc.pad * S); pc.bb.x0 -= d; pc.bb.y0 -= d; pc.bb.x1 += d; pc.bb.y1 += d; } list.push(pc); }
+  for (const L of R.letters) for (const pc of L.pieces){ if (pc.noPrint) continue; pc.bb = bboxOf(pc.layers.flatMap(l => l.ex.map(e => e.outer))); if (pc.pad){ const d = Math.round(pc.pad * S); pc.bb.x0 -= d; pc.bb.y0 -= d; pc.bb.x1 += d; pc.bb.y1 += d; } list.push(pc); }
   list.sort((a, b) => (b.bb.y1 - b.bb.y0) - (a.bb.y1 - a.bb.y0) || (b.bb.x1 - b.bb.x0) - (a.bb.x1 - a.bb.x0));
   for (const pc of list){
     const w = (pc.bb.x1 - pc.bb.x0) / S, h = (pc.bb.y1 - pc.bb.y0) / S;
@@ -12453,7 +12512,7 @@ function ensurePrinted(pc, R){
 function packOut(R){
   if (!R.letters) return {R: {msgs: R.msgs}, tr: []};
   const tr = [];
-  const letters = R.letters.map(L => ({index: L.index, w: L.w, h: L.h, pieces: L.pieces.map(pc => ({kind: pc.kind, flip: pc.flip, z0: pc.z0, z1: pc.z1, bb: pc.bb, pos: pc.pos, pad: pc.pad,
+  const letters = R.letters.map(L => ({index: L.index, w: L.w, h: L.h, pieces: L.pieces.map(pc => ({kind: pc.kind, flip: pc.flip, z0: pc.z0, z1: pc.z1, bb: pc.bb, pos: pc.pos, pad: pc.pad, noPrint: pc.noPrint, outline: pc.outline,
     layers: pc.layers.map(l => {
       const g = l.g.index ? l.g.toNonIndexed() : l.g, pos = g.attributes.position.array.slice(), nr = g.attributes.normal ? g.attributes.normal.array.slice() : null;
       tr.push(pos.buffer); if (nr) tr.push(nr.buffer);
@@ -12505,6 +12564,7 @@ const xesc = t => String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').repla
 async function build3mf(){
   const R = result, objs = [];
   for (const L of R.letters) for (const pc of L.pieces){
+    if (pc.noPrint) continue;
     ensurePrinted(pc, R);
     const byMat = new Map();
     for (const l of pc.layers){ if (!byMat.has(l.mat)) byMat.set(l.mat, []); byMat.get(l.mat).push(l.pg); }
@@ -12531,9 +12591,26 @@ async function build3mf(){
   z.file('Metadata/model_settings.config', `<?xml version="1.0" encoding="UTF-8"?>\n<config>\n${cfg.join('\n')}\n</config>\n`);
   return z.generateAsync({type: 'arraybuffer', compression: 'DEFLATE'});
 }
+// DXF лица из акрила: замкнутые полилинии в мм (R12 — открывается в CorelDRAW, ArtCAM, Aspire, AutoCAD)
+function acrylicDxf(R){
+  const polys = [];
+  for (const L of R.letters) for (const pc of L.pieces) if (pc.kind === 'acrylic' && pc.outline) polys.push(...pc.outline);
+  if (!polys.length) return null;
+  let x0 = Infinity, y0 = Infinity; for (const pth of polys) for (const q of pth){ if (q.X < x0) x0 = q.X; if (q.Y < y0) y0 = q.Y; }
+  const n = v => (Math.round(v * 1e4) / 1e4).toFixed(4);
+  const out = ['0', 'SECTION', '2', 'HEADER', '9', '$ACADVER', '1', 'AC1009', '9', '$INSUNITS', '70', '4', '0', 'ENDSEC', '0', 'SECTION', '2', 'ENTITIES'];
+  for (const pth of polys){
+    out.push('0', 'POLYLINE', '8', 'AKRIL', '66', '1', '10', '0.0', '20', '0.0', '30', '0.0', '70', '1');
+    for (const q of pth) out.push('0', 'VERTEX', '8', 'AKRIL', '10', n((q.X - x0) / S), '20', n((q.Y - y0) / S), '30', '0.0');
+    out.push('0', 'SEQEND', '8', 'AKRIL');
+  }
+  out.push('0', 'ENDSEC', '0', 'EOF');
+  return out.join('\r\n') + '\r\n';
+}
 function stlGroups(){
   const R = result, groups = new Map();
   for (const L of R.letters) for (const pc of L.pieces){
+    if (pc.noPrint) continue;
     ensurePrinted(pc, R);
     for (const l of pc.layers){ const key = `${fileName}_${KIND_LAT[pc.kind]}_plastik${l.mat}.stl`; if (!groups.has(key)) groups.set(key, []); groups.get(key).push(l.pg); }
   }
@@ -12548,6 +12625,16 @@ function anchorSave(name, data){
   const url = URL.createObjectURL(data instanceof Blob ? data : new Blob([data], {type: 'application/octet-stream'}));
   const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+async function downloadDxf(){
+  if (!result) return;
+  const txt = acrylicDxf(result);
+  if (!txt){ showMsgs('msgs', [{t: 'warn', m: 'Нет лица из акрила — включите его в блоке «Лицо из акрила».'}]); return; }
+  const name = fileName + '_akril.dxf', dl = await downloadsApi();
+  if (dl){
+    try { await dl.save({filename: name, data: new Blob([txt], {type: 'application/dxf'})}); showMsgs('msgs', [{t: 'ok', m: 'DXF акрила сохранён.'}]); }
+    catch (e){ if (e && e.code !== 'declined') showMsgs('msgs', [{t: 'err', m: 'Не удалось сохранить DXF: ' + (e.message || e.code)}]); }
+  } else anchorSave(name, new Blob([txt], {type: 'application/dxf'}));
 }
 async function download(kind){
   if (!result) return;
@@ -12565,6 +12652,7 @@ async function download(kind){
     if (dl || kind === 'all'){
       const z = new JSZip();
       z.file(fileName + '_orca.3mf', await build3mf());
+      const acr = acrylicDxf(result); if (acr) z.file(fileName + '_akril.dxf', acr);
       for (const [name, geoms] of stlGroups()) z.file(name, stl(geoms));
       const blob = await z.generateAsync({type: 'blob', compression: 'DEFLATE'});
       if (dl){
@@ -12586,6 +12674,7 @@ let V = null, viewMode = 'asm', explode = false;
 const matCache = {};
 function slotColor(i){ return P['c' + i] || '#888888'; }
 function matFor(i){
+  if (i === 'acr'){ if (!matCache.acr) matCache.acr = new THREE.MeshStandardMaterial({color: 0xeef4f8, roughness: 0.2, metalness: 0, transparent: true, opacity: 0.6, side: THREE.DoubleSide}); return matCache.acr; }
   if (!matCache[i]) matCache[i] = new THREE.MeshStandardMaterial({roughness: 0.6, metalness: 0.04, side: THREE.DoubleSide});
   matCache[i].color.set(slotColor(i));
   return matCache[i];
@@ -12668,13 +12757,14 @@ function drawDiagram(){
   if (!prof){ box.innerHTML = `<svg viewBox="0 0 ${Wv} ${Hv}" role="img" aria-label="Схема борта"><text x="170" y="180" text-anchor="middle" class="dm">${P.wallType === 'custom' ? 'Загрузите файл профиля' : 'Проверьте размеры борта'}</text></svg>`; return; }
   const H = prof.H, maxR = Math.max(...prof.pts.map(q => q.r));
   const fm = P.faceMode, bm = P.backMode, tray = bm === 'tray';
-  const g = fm === 'separate' ? grooveOf(P, prof) : null;
+  const g = fm === 'separate' || fm === 'acrylic' ? grooveOf(P, prof) : null;
+  const faceT = fm === 'acrylic' ? P.acrT : P.tFace;
   const lipOn = tray && P.lipH > 0 && P.lipW > 0, skirtSt = tray && P.trayStyle === 'skirt';
   const zoff = skirtSt ? P.tBack : 0;                       // в сборе борт стоит на плите поддона
   const riW = prof.kind === 'custom' ? maxR : (rMax(prof.pts, 0.3) || P.B);
   const notch = false, pkR1 = 0, pkTop = 0;
   const lapK = prof.kind === 'lap';
-  const Htot = Math.max(H + zoff, g ? zoff + g.seat + P.tFace : 0, lapK ? H + zoff + P.tFace : 0);
+  const Htot = Math.max(H + zoff, g ? zoff + g.seat + faceT : 0, lapK ? H + zoff + P.tFace : 0);
   const k = 225 / Htot;
   const trayR = tray ? (skirtSt ? riW + P.gapTray + (lipOn ? P.lipW : 0) + 0.5 : riW + P.gapTray + (lipOn ? P.lipW : 0) + 0.5) : 0;
   const kx = Math.max(k, Math.min(28, 80 / Math.max(maxR, trayR, 2.5)));
@@ -12703,6 +12793,10 @@ function drawDiagram(){
   const calls = [];                   // подписи с выносками: {y: цель по вертикали, tx, ty: точка на детали, t, col}
   // --- лицо
   if (fm === 'integral'){ const ro = rMin(prof.pts, H - P.tFace / 2) || 0; s += slab(ro, zoff + H - P.tFace, zoff + H, cf); s += T(xFar, Y(zoff + H) - 7, `Лицо D · ${fmt(P.tFace)} мм`, 'var(--dimD)', 'end'); }
+  if (fm === 'acrylic' && g){
+    s += slab(g.rIn + P.acrGap, zoff + g.seat, zoff + g.seat + P.acrT, '#dfe9f2', true);
+    s += T(xFar, Y(zoff + g.seat + P.acrT) - 7, `Акрил ${fmt(P.acrT)} мм · зазор ${fmt(P.acrGap)} · фреза ⌀${fmt(P.acrD, 3)}`, '#bcd3e6', 'end');
+  }
   if (fm === 'separate' && g){
     s += slab(g.rIn + P.gapFace, zoff + g.seat, zoff + g.seat + P.tFace, cf, true);
     s += T(xFar, Y(zoff + g.seat + P.tFace) - 7, `Лицо D · ${fmt(P.tFace)} мм · зазор ${fmt(P.gapFace)}`, 'var(--dimD)', 'end');
@@ -12762,10 +12856,11 @@ function drawDiagram(){
     if (R0) s += `<text x="12" y="${yb + 40}" class="dm">Габарит надписи ${fmt(R0.W, 0)} × ${fmt(R0.Hh, 0)} мм${dd ? `, задник ≈ ${fmt(Math.max(0, R0.W - dd), 0)} × ${fmt(Math.max(0, R0.Hh - dd), 0)} мм` : ''}</text>`;
   }
   // --- паз лица и ступенька
-  if ((prof.kind === 'standard' || prof.kind === 'ledge') && P.C > 0){
+  const Cv = prof.kind === 'acrylic' ? P.acrC : P.C;
+  if ((prof.kind === 'standard' || prof.kind === 'ledge' || prof.kind === 'acrylic') && Cv > 0){
     const xc = X(maxR) + 10;
-    s += `<line x1="${xc}" y1="${Y(zoff + H)}" x2="${xc}" y2="${Y(zoff + H - P.C)}" stroke="var(--dimC)" stroke-width="1.5"/><line x1="${xc - 4}" y1="${Y(zoff + H)}" x2="${xc + 4}" y2="${Y(zoff + H)}" stroke="var(--dimC)"/><line x1="${xc - 4}" y1="${Y(zoff + H - P.C)}" x2="${xc + 4}" y2="${Y(zoff + H - P.C)}" stroke="var(--dimC)"/>`;
-    s += T(xc + 7, (Y(zoff + H) + Y(zoff + H - P.C)) / 2 + 4, `C · ${fmt(P.C)} мм`, 'var(--dimC)');
+    s += `<line x1="${xc}" y1="${Y(zoff + H)}" x2="${xc}" y2="${Y(zoff + H - Cv)}" stroke="var(--dimC)" stroke-width="1.5"/><line x1="${xc - 4}" y1="${Y(zoff + H)}" x2="${xc + 4}" y2="${Y(zoff + H)}" stroke="var(--dimC)"/><line x1="${xc - 4}" y1="${Y(zoff + H - Cv)}" x2="${xc + 4}" y2="${Y(zoff + H - Cv)}" stroke="var(--dimC)"/>`;
+    s += T(xc + 7, Y(zoff + H - Cv) + 15, `C · ${fmt(Cv)} мм`, 'var(--dimC)');
   }
   if (prof.kind === 'ledge') s += T(X(P.B + P.E) + 8, Y(zoff + H - Math.max(0, P.C)) + 20, `E · ${fmt(P.E)} мм`, 'var(--dimE)') + T(X(P.B + P.E) + 8, Y(zoff + H - Math.max(0, P.C)) + 35, `α · ${fmt(P.alpha, 0)}°`, 'var(--dimE)');
   s += `<text x="${X(0) - 4}" y="${Y(Htot) - 26}" text-anchor="end" class="dm">Снаружи</text><text x="${X(0) + 4}" y="${Y(Htot) - 26}" class="dm">Внутри →</text>`;
@@ -12843,8 +12938,8 @@ const VIS = {
   srcText: () => P.src === 'text', srcFile: () => P.src === 'file',
   lap: () => P.faceMode === 'separate' && P.faceJoin === 'lap' && P.wallType !== 'custom', groove: () => !(P.faceMode === 'separate' && P.faceJoin === 'lap' && P.wallType !== 'custom'), faceSepStd: () => P.faceMode === 'separate' && P.wallType !== 'custom',
   standard: () => P.wallType === 'standard' && !(P.faceMode === 'separate' && P.faceJoin === 'lap'), ledge: () => P.wallType === 'ledge' && !(P.faceMode === 'separate' && P.faceJoin === 'lap'), custom: () => P.wallType === 'custom',
-  grooveOn: () => P.wallType !== 'custom' && P.faceMode !== 'integral', grooveOff: () => P.wallType !== 'custom' && P.faceMode === 'integral',
-  rel: () => P.relType !== 'none', stripe: () => P.stripeOn, face: () => P.faceMode !== 'none', faceSep: () => P.faceMode === 'separate',
+  grooveOn: () => P.wallType !== 'custom' && P.faceMode !== 'integral' && P.faceMode !== 'acrylic', grooveOff: () => P.wallType !== 'custom' && P.faceMode === 'integral',
+  rel: () => P.relType !== 'none', stripe: () => P.stripeOn, face: () => P.faceMode !== 'none' && P.faceMode !== 'acrylic', acr: () => P.faceMode === 'acrylic', notAcr: () => P.faceMode !== 'acrylic', faceSep: () => P.faceMode === 'separate',
   back: () => P.backMode !== 'none', tray: () => P.backMode === 'tray',
   pat: () => P.pattern !== 'solid', voronoi: () => P.pattern === 'voronoi', inlay: () => P.pattern !== 'solid' && P.patMode === 'inlay'
 };
@@ -12889,7 +12984,8 @@ function summaries(){
   set('sSrc', P.src === 'text'
     ? `«${String(P.text).replace(/\s+/g, ' ').trim().slice(0, 22) || '…'}» · ${fontName} · ${fmt(P.txtH, 0)} мм`
     : (fileLabel ? `${fileLabel} · ${selected.size} из ${parts.length} · ${fmt(P.scaleW, 0)} мм` : 'Файл не загружен'));
-  const faceTxt = {integral: 'Лицо заодно', separate: 'Лицо отдельно', none: 'Без лица'}[P.faceMode];
+  const faceTxt = {integral: 'Лицо заодно', separate: 'Лицо отдельно', none: 'Без лица', acrylic: 'Лицо — акрил'}[P.faceMode];
+  set('sAcr', P.faceMode === 'acrylic' ? `Акрил ${fmt(P.acrT)} мм · паз ${fmt(P.acrC)} мм · фреза ⌀${fmt(P.acrD, 3)}` : 'Выключено — лицо печатается');
   set('sTop', `${faceTxt} · борт ${P.wallType === 'custom' && profile ? fmt(profile.H) + ' мм, свой профиль' : fmt(P.A) + ' × ' + fmt(P.B) + ' мм'}`);
   set('sBack', {tray: `Поддон ${fmt(P.tBack)} мм, бортик ${fmt(P.lipH)} мм`, integral: `Заодно с бортом, ${fmt(P.tBack)} мм`, none: 'Без задника'}[P.backMode]);
   set('sPat', P.pattern === 'solid' ? 'Без узора' : `${({hex: 'Соты', scales: 'Чешуя', petals: 'Лепестки', voronoi: 'Вороной'})[P.pattern]} ${fmt(P.patSize)} мм на ${P.patOn === 'face' ? 'лице' : 'заднике'}, ${P.patMode === 'inlay' ? 'вторым пластиком' : 'насквозь'}`);
@@ -12905,10 +13001,13 @@ function refreshUI(){
   const cu = P.wallType === 'custom';
   for (const id of ['A', 'B']){ const el = $(id); el.disabled = cu && !!profile; if (cu && profile) el.value = fmt(id === 'A' ? profile.H : profile.W); else if (document.activeElement !== el) el.value = fmt(P[id], 3); }
   const po = $('patOn');
-  [...po.options].forEach(o => { o.disabled = o.value === 'face' ? P.faceMode === 'none' : P.backMode === 'none'; });
+  [...po.options].forEach(o => { o.disabled = o.value === 'face' ? (P.faceMode === 'none' || P.faceMode === 'acrylic') : P.backMode === 'none'; });
   if (po.selectedOptions[0] && po.selectedOptions[0].disabled){ const ok = [...po.options].find(o => !o.disabled); if (ok){ P.patOn = ok.value; po.value = ok.value; } }
   document.querySelectorAll('[data-pat]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pat === P.pattern)));
   $('seedLbl').textContent = 'Вариант узора · ' + P.patSeed;
+  $('acrOn').checked = P.faceMode === 'acrylic';
+  drawAcrCorner();
+  document.querySelectorAll('[data-acrd]').forEach(b => b.setAttribute('aria-pressed', String(Math.abs(+b.dataset.acrd - P.acrD) < 1e-6)));
   renderChips(); drawDiagram(); drawSample(); summaries();
 }
 function renderPicker(){
@@ -12944,7 +13043,7 @@ function rebuildSource(){
 }
 function onParam(k){
   save();
-  if (/^c\d$/.test(k)){ for (const i in matCache) matFor(+i); if (V) V.dirty = true; refreshUI(); return; }
+  if (/^c\d$/.test(k)){ for (const i in matCache) if (/^\d+$/.test(i)) matFor(+i); if (V) V.dirty = true; refreshUI(); return; }
   if (k === 'text' || k === 'font' || k === 'txtH' || k === 'txtGap'){ summaries(); clearTimeout(srcTimer); srcTimer = setTimeout(rebuildSource, 300); return; }
   if (k === 'src' || k === 'flipX'){ refreshUI(); rebuildSource(); return; }
   if (k === 'scaleW' || k === 'bed') needFit = true;
@@ -13053,6 +13152,38 @@ async function build(){
   if (R.stale) return;
   applyResult(R);
 }
+// схема угла: как фреза оставляет скругление на акриле и такое же скругление в пазу борта
+function drawAcrCorner(){
+  const box = $('acrCorner'); if (!box || P.faceMode !== 'acrylic') return;
+  const R = Math.max(7, Math.min(40, P.acrD / 2 * 8)), cx = 110, cy = 72, cw = slotColor(P.matWall);
+  const acr = `M10 10H${cx}V${cy - R}A${R} ${R} 0 0 0 ${cx + R} ${cy}H200V140H10Z`;
+  const wall = `M${cx} 10H200V${cy}H${cx + R}A${R} ${R} 0 0 1 ${cx} ${cy - R}Z`;
+  const tx = cx + R - R * 0.707, ty = cy - R + R * 0.707;
+  box.innerHTML = `<svg viewBox="0 0 330 150" role="img" aria-label="Скругление внутреннего угла под фрезу">
+    <defs><pattern id="hhc" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="${cw}" fill-opacity=".18"/><line x1="0" y1="0" x2="0" y2="6" stroke="${cw}" stroke-width="1.6"/></pattern></defs>
+    <path d="${acr}" fill="#dfe9f2" fill-opacity=".85"/>
+    <path d="${wall}" fill="url(#hhc)" stroke="${cw}" stroke-width="1.5"/>
+    <circle cx="${cx + R}" cy="${cy - R}" r="${R}" fill="none" stroke="var(--accent)" stroke-width="1.4" stroke-dasharray="4 3"/>
+    <line x1="${cx + R}" y1="${cy - R}" x2="${tx}" y2="${ty}" stroke="var(--accent)" stroke-width="1.2"/>
+    <line x1="208" y1="30" x2="186" y2="30" stroke="${cw}" stroke-width=".9"/><text x="212" y="34" style="fill:${cw};font-weight:700">борт, паз</text>
+    <line x1="208" y1="62" x2="${cx + R + R * 0.6}" y2="${cy - R - R * 0.6}" stroke="var(--accent)" stroke-width=".9"/><text x="212" y="66" style="fill:var(--accent);font-weight:700">фреза ⌀${fmt(P.acrD, 3)}</text>
+    <line x1="208" y1="88" x2="${tx}" y2="${ty}" stroke="var(--accent)" stroke-width=".9"/><text x="212" y="92" style="fill:var(--accent)">скругление R ${fmt(P.acrD / 2)}</text>
+    <line x1="208" y1="122" x2="160" y2="110" stroke="#dfe9f2" stroke-width=".9"/><text x="212" y="126" style="fill:#dfe9f2;font-weight:700">акрил</text>
+  </svg>`;
+}
+function drawAcr(){
+  const box = $('acrView'), note = $('acrNote'); if (!box) return;
+  const polys = [];
+  if (result) for (const L of result.letters) for (const pc of L.pieces) if (pc.kind === 'acrylic' && pc.outline) polys.push(...pc.outline);
+  if (!polys.length){ box.innerHTML = `<div class="empty">${P.faceMode === 'acrylic' ? 'Контур акрила появится после расчёта модели.' : ''}</div>`; if (note) note.textContent = ''; return; }
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const pth of polys) for (const q of pth){ if (q.X < x0) x0 = q.X; if (q.X > x1) x1 = q.X; if (q.Y < y0) y0 = q.Y; if (q.Y > y1) y1 = q.Y; }
+  const w = (x1 - x0) / S, h = (y1 - y0) / S, pad = Math.max(w, h) * 0.03;
+  const d = polys.map(pth => 'M' + pth.map(q => ((q.X - x0) / S).toFixed(2) + ' ' + ((y1 - q.Y) / S).toFixed(2)).join('L') + 'Z').join('');
+  box.innerHTML = `<svg viewBox="${-pad} ${-pad} ${w + 2 * pad} ${h + 2 * pad}" role="img" aria-label="Контур лица из акрила"><path d="${d}" fill="#dfe9f2" fill-opacity=".35" fill-rule="evenodd" stroke="#dfe9f2" stroke-width="${Math.max(w, h) / 500}"/></svg>`;
+  const n = result.letters.reduce((s, L) => s + L.pieces.filter(pc => pc.kind === 'acrylic').length, 0);
+  if (note) note.textContent = `${n} ${plural(n, ['деталь', 'детали', 'деталей'])} из акрила ${fmt(P.acrT)} мм, габарит ${fmt(w, 0)} × ${fmt(h, 0)} мм. Внутренние углы скруглены под фрезу ⌀${fmt(P.acrD, 3)} (радиус не меньше ${fmt(P.acrD / 2)} мм), паз в борту — так же.`;
+}
 function applyResult(R){
   const old = result;
   result = R.letters ? R : null;
@@ -13060,14 +13191,14 @@ function applyResult(R){
   drawDiagram();
   if (old) disposeResult(old);
   showMsgs('msgs', srcMsgs.concat(R.msgs));
-  fillStats(); stripeText(); hideProgress(); setBusy(false);
+  fillStats(); stripeText(); drawAcr(); hideProgress(); setBusy(false);
 }
 function fillStats(){
   const st = $('stats'); st.innerHTML = '';
-  ['btn3mf', 'btnStl', 'btnAll'].forEach(id => $(id).disabled = !result);
+  ['btn3mf', 'btnStl', 'btnAll', 'btnDxf'].forEach(id => $(id).disabled = !result);
   if (!result) return;
   const R = result;
-  const mats = new Set(); R.letters.forEach(L => L.pieces.forEach(pc => pc.layers.forEach(l => mats.add(l.mat))));
+  const mats = new Set(); R.letters.forEach(L => L.pieces.forEach(pc => pc.layers.forEach(l => { if (l.mat !== 'acr') mats.add(l.mat); })));
   const rows = [
     ['Букв', String(R.letters.length)],
     ['Деталей', String(R.pieces)],
@@ -13076,6 +13207,7 @@ function fillStats(){
     ['Пластики', [...mats].sort().map(m => '№' + m).join(', ')]
   ];
   if (R.cellsTotal) rows.push(['Ячеек узора', String(R.cellsTotal)]);
+  if (R.face === 'acrylic') rows.push(['Акрил', `${fmt(R.p.acrT)} мм, фреза ⌀${fmt(R.p.acrD, 3)}`]);
   for (const [a, b] of rows){ const d = document.createElement('div'), dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = a; dd.textContent = b; d.append(dt, dd); st.appendChild(d); }
 }
 function stripeText(){
@@ -13172,11 +13304,19 @@ function bindUI(){
   $('btn3mf').addEventListener('click', () => download('3mf'));
   $('btnStl').addEventListener('click', () => download('stl'));
   $('btnAll').addEventListener('click', () => download('all'));
+  $('btnDxf').addEventListener('click', downloadDxf);
+  let lastFace = P.faceMode === 'acrylic' ? 'separate' : P.faceMode;
+  $('acrOn').addEventListener('change', e => {
+    if (e.target.checked){ if (P.faceMode !== 'acrylic') lastFace = P.faceMode; P.faceMode = 'acrylic'; }
+    else P.faceMode = lastFace === 'acrylic' ? 'separate' : lastFace;
+    syncInputs(); onParam('faceMode');
+  });
+  document.querySelectorAll('[data-acrd]').forEach(b => b.addEventListener('click', () => { P.acrD = +b.dataset.acrd; syncInputs(); onParam('acrD'); }));
 
   downloadsApi().then(dl => { dlMode = !!dl; $('btnAll').hidden = !dlMode; $('btn3mf').hidden = dlMode; $('btnStl').hidden = dlMode; });
 }
 
-window.__bukvy = {P, DEF, rebuildSource, buildAll, build3mf, stlGroups, stl, dxfToItems, makeCells, loadFile, loadProfile, textItems,
+window.__bukvy = {P, DEF, rebuildSource, buildAll, build3mf, stlGroups, stl, dxfToItems, acrylicDxf, makeCells, loadFile, loadProfile, textItems,
   select: ids => { selected = new Set(ids); }, get parts(){ return parts; }, get result(){ return result; }, set result(r){ result = r; }, disposeResult};
 
 fillFonts();
