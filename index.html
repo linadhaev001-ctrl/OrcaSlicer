@@ -3,32 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
 <title>Генератор вывесок</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
 <style>
 /* Layout: как в мастерской — слева блоки настроек по деталям вывески, справа всегда виден стол принтера с готовыми деталями */
+/* Тёмная тема — единственная: страница всегда тёмная, как рабочий стол слайсера */
 :root{
-  --bg:#f1f0ec; --panel:#ffffff; --soft:#f8f7f3; --fg:#1d1d1b; --muted:#6c6b66; --line:#e2e0d9; --line2:#cfccc3;
-  --accent:#e2271c; --accent-soft:#fdebe8; --accent-line:#f3b6af; --accent-fill:#f9b4ad; --accent-ink:#ffffff;
-  --ok:#1f7a4d; --warn:#a85a07; --err:#c0262d;
-  --dimA:#2e9b62; --dimB:#3b7fd4; --dimC:#d38a12; --dimD:#c23f7c; --dimE:#138f94;
-  --cellbg:#eef2f7; --view:#e7e6e2;
+  --bg:#141413; --panel:#1d1d1b; --soft:#252522; --fg:#ecebe6; --muted:#a3a29b; --line:#34332f; --line2:#4a4843;
+  --accent:#ff5a4f; --accent-soft:#3a1d1a; --accent-line:#7a3029; --accent-fill:#6e2a24; --accent-ink:#1a0806;
+  --ok:#5fd29a; --warn:#f0a35c; --err:#ff7b80;
+  --dimA:#5cc98d; --dimB:#78a9f0; --dimC:#f0b24a; --dimD:#f07ab0; --dimE:#4fc6c9;
+  --cellbg:#2a2f36; --view:#0f1012; color-scheme:dark;
   --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#141413; --panel:#1d1d1b; --soft:#252522; --fg:#ecebe6; --muted:#a3a29b; --line:#34332f; --line2:#4a4843;
-  --accent:#ff5a4f; --accent-soft:#3a1d1a; --accent-line:#7a3029; --accent-fill:#6e2a24; --accent-ink:#1a0806;
-  --ok:#5fd29a; --warn:#f0a35c; --err:#ff7b80;
-  --dimA:#5cc98d; --dimB:#78a9f0; --dimC:#f0b24a; --dimD:#f07ab0; --dimE:#4fc6c9;
-  --cellbg:#2a2f36; --view:#0f1012; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#141413; --panel:#1d1d1b; --soft:#252522; --fg:#ecebe6; --muted:#a3a29b; --line:#34332f; --line2:#4a4843;
-  --accent:#ff5a4f; --accent-soft:#3a1d1a; --accent-line:#7a3029; --accent-fill:#6e2a24; --accent-ink:#1a0806;
-  --ok:#5fd29a; --warn:#f0a35c; --err:#ff7b80;
-  --dimA:#5cc98d; --dimB:#78a9f0; --dimC:#f0b24a; --dimD:#f07ab0; --dimE:#4fc6c9;
-  --cellbg:#2a2f36; --view:#0f1012; color-scheme:dark}
+
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--fg);font:15px/1.45 var(--f-body);margin:0;
