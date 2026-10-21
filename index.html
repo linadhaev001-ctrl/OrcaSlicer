@@ -264,6 +264,19 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
         </div>
       </details>
 
+      <details class="blk" id="blkRel">
+        <summary><span class="dot" id="dotRel"></span><span class="bt"><b>Рельеф борта</b><small id="sRel"></small></span><span class="chev"></span></summary>
+        <div class="bb">
+          <label class="f wide"><span>Рельеф снаружи борта</span><select class="in" id="relType" data-k="relType"><option value="none">Без рельефа</option><option value="studs">Пупырышки (полусферы)</option><option value="cones">Шипы (конусы)</option><option value="pyramids">Пирамидки</option><option value="dimples">Ямки (соты)</option></select></label>
+          <div class="g2" data-vis="rel">
+            <label class="f"><span>Высота рельефа, мм</span><input class="in" id="relH" data-k="relH" inputmode="decimal"></label>
+            <label class="f"><span>Шаг рисунка, мм</span><input class="in" id="relPitch" data-k="relPitch" inputmode="decimal"></label>
+            <label class="f"><span>Отступ от краёв борта, мм</span><input class="in" id="relMargin" data-k="relMargin" inputmode="decimal"></label>
+          </div>
+          <p class="hint" data-vis="rel">Рельеф растёт наружу: буква по борту станет больше на его высоту. Шаг подгоняется, чтобы рисунок замкнулся без шва. Мелкий шаг даёт тяжёлые файлы.</p>
+        </div>
+      </details>
+
       <details class="blk" id="blkStripe">
         <summary><span class="dot" id="dotStripe"></span><span class="bt"><b>Полоса на борту</b><small id="sStripe"></small></span><span class="chev"></span></summary>
         <div class="bb">
@@ -11658,6 +11671,7 @@ const DEF = {
   stripeOn: false, stripeH: 10, stripeFrom: '', layerH: 0.2, matStripe: 4,
   faceMode: 'integral', tFace: 1.2, gapFace: 0.15, matFace: 2,
   backMode: 'tray', trayStyle: 'skirt', tBack: 2, lipH: 10, lipW: 1.5, fillet: 2, gapTray: 0.2, matBack: 1,
+  relType: 'none', relH: 1.2, relPitch: 6, relMargin: 1,
   patOn: 'face', patMode: 'through', pattern: 'solid', patSize: 12, patRib: 1.2, patFrame: 2, patSeed: 0, matPat: 3,
   c1: '#e2271c', c2: '#f4f2ec', c3: '#26282c', c4: '#f2b632'
 };
@@ -12119,6 +12133,93 @@ function stripeOf(p, H, zBot, zTop, flip, msgs){
 }
 
 /* ================= сборка модели ================= */
+// рельеф наружной стороны борта: «кожа» вокруг контура с высотой по узору (пупырышки, шипы, пирамидки, ямки)
+function reliefSkin(A, p, z0, z1){
+  const h = p.relH, pitch = p.relPitch, type = p.relType, e = 0.4;
+  const stag = type !== 'pyramids';
+  const nRows = Math.max(1, Math.round((z1 - z0) / (stag ? pitch * 0.866 : pitch))), pz = (z1 - z0) / nRows;
+  const sub = 6, K = nRows * sub, dzs = (z1 - z0) / K;
+  const area = pth => { let s = 0; for (let i = 0; i < pth.length; i++){ const a = pth[i], b = pth[(i + 1) % pth.length]; s += a.X * b.Y - b.X * a.Y; } return s / 2; };
+  const sA0 = Math.sign(area(A[0]));
+  const pos = [], tri = [];
+  let cells = 0;
+  for (const path of A){
+    const pts = path.map(q => ({x: q.X / S, y: q.Y / S}));
+    if (pts.length > 1 && Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y) < 1e-6) pts.pop();
+    const m = pts.length; if (m < 3) continue;
+    const a = area(path), isOuter = path === A[0] || Math.sign(a) === sA0, right = isOuter === (a > 0), sg = right ? 1 : -1;
+    const ed = [];
+    let L = 0;
+    for (let i = 0; i < m; i++){
+      const p0 = pts[i], p1 = pts[(i + 1) % m], dx = p1.x - p0.x, dy = p1.y - p0.y, len = Math.hypot(dx, dy) || 1e-9;
+      const tx = dx / len, ty = dy / len;
+      ed.push({len, tx, ty, nx: sg * ty, ny: -sg * tx}); L += len;
+    }
+    const nC = Math.max(3, Math.round(L / pitch)), pu = L / nC, dstep = pu / sub;
+    // нормали вершин: вход/выход
+    const vin = [], vout = [];
+    for (let i = 0; i < m; i++){
+      const ei = ed[(i + m - 1) % m], eo = ed[i], cr = ei.tx * eo.ty - ei.ty * eo.tx, dot = ei.tx * eo.tx + ei.ty * eo.ty, ang = Math.atan2(Math.abs(cr), dot);
+      if (ang > 0.5 && sg * cr > 0){ vin.push([ei.nx, ei.ny]); vout.push([eo.nx, eo.ny]); }
+      else { let nx = ei.nx + eo.nx, ny = ei.ny + eo.ny; const l = Math.hypot(nx, ny); if (l < 1e-6){ nx = eo.nx; ny = eo.ny; } else { nx /= l; ny /= l; } vin.push([nx, ny]); vout.push([nx, ny]); }
+    }
+    const cols = []; let u = 0;
+    for (let i = 0; i < m; i++){
+      const P0 = pts[i];
+      cols.push({x: P0.x, y: P0.y, nx: vin[i][0], ny: vin[i][1], u});
+      if (vin[i][0] !== vout[i][0] || vin[i][1] !== vout[i][1]) cols.push({x: P0.x, y: P0.y, nx: vout[i][0], ny: vout[i][1], u});
+      const eo = ed[i], P1 = pts[(i + 1) % m], ns = Math.max(1, Math.ceil(eo.len / dstep));
+      for (let s = 1; s < ns; s++){
+        const t = s / ns; let nx = vout[i][0] * (1 - t) + vin[(i + 1) % m][0] * t, ny = vout[i][1] * (1 - t) + vin[(i + 1) % m][1] * t; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
+        cols.push({x: P0.x + (P1.x - P0.x) * t, y: P0.y + (P1.y - P0.y) * t, nx, ny, u: u + eo.len * t});
+      }
+      u += eo.len;
+    }
+    const disp = (uu, z) => {
+      let best = 0;
+      if (stag){
+        const j0 = Math.floor((z - z0) / pz), R = 0.5 * pu * (type === 'dimples' ? 0.92 : type === 'studs' ? 0.96 : 1);
+        for (let jj = j0 - 1; jj <= j0 + 1; jj++){
+          const zc = z0 + (jj + 0.5) * pz, off = (jj & 1) ? 0.5 : 0, i = Math.round(uu / pu - off), du = uu - (i + off) * pu, d = Math.hypot(du, z - zc);
+          if (d < R){ const v = type === 'cones' ? 1 - d / R : Math.sqrt(1 - (d / R) * (d / R)); if (v > best) best = v; }
+        }
+      } else {
+        const j = Math.max(0, Math.min(nRows - 1, Math.floor((z - z0) / pz))), zc = z0 + (j + 0.5) * pz, i = Math.round(uu / pu), du = uu - i * pu;
+        best = Math.max(0, 1 - Math.max(Math.abs(du) / (pu / 2), Math.abs(z - zc) / (pz / 2)));
+      }
+      return type === 'dimples' ? h * (1 - 0.85 * best) : h * best;
+    };
+    const base = pos.length / 3, nc = cols.length;
+    for (let c = 0; c < nc; c++){
+      const q = cols[c];
+      for (let k = 0; k <= K; k++){
+        const z = k === K ? z1 : z0 + k * dzs, f = disp(q.u, z);
+        pos.push(q.x + q.nx * f, q.y + q.ny * f, z);       // наружная (индекс 2*(c*(K+1)+k))
+        pos.push(q.x - q.nx * e, q.y - q.ny * e, z);       // внутренняя
+      }
+    }
+    const O = (c, k) => base + 2 * ((c % nc) * (K + 1) + k), I = (c, k) => O(c, k) + 1;
+    const quad = (a1, b1, c1, d1, flip) => { if (flip) tri.push(a1, c1, b1, a1, d1, c1); else tri.push(a1, b1, c1, a1, c1, d1); };
+    for (let c = 0; c < nc; c++){
+      const c1 = c + 1;
+      for (let k = 0; k < K; k++){
+        quad(O(c, k), O(c1, k), O(c1, k + 1), O(c, k + 1), sg < 0);
+        quad(I(c, k), I(c1, k), I(c1, k + 1), I(c, k + 1), sg > 0);
+      }
+      quad(I(c, 0), I(c1, 0), O(c1, 0), O(c, 0), sg < 0);
+      quad(O(c, K), O(c1, K), I(c1, K), I(c, K), sg < 0);
+      cells += K;
+    }
+  }
+  if (!tri.length) return null;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  const same = (u, v) => pos[3 * u] === pos[3 * v] && pos[3 * u + 1] === pos[3 * v + 1] && pos[3 * u + 2] === pos[3 * v + 2], keep = [];
+  for (let i = 0; i < tri.length; i += 3){ const u = tri[i], v = tri[i + 1], w = tri[i + 2]; if (!same(u, v) && !same(v, w) && !same(u, w)) keep.push(u, v, w); }
+  g.setIndex(keep);
+  const ng = g.toNonIndexed(); g.dispose(); ng.computeVertexNormals();
+  return ng;
+}
 function buildAll(p){
   const msgs = [], err = m => msgs.push({t: 'err', m}), warn = m => msgs.push({t: 'warn', m});
   const hasErr = () => msgs.some(m => m.t === 'err');
@@ -12151,6 +12252,11 @@ function buildAll(p){
     else if (p.patOn === 'back' && bm !== 'none') patTarget = 'back';
     else warn('Узор не наложен: на выбранной панели нет детали.');
   }
+  let relOn = p.relType !== 'none';
+  if (relOn && p.wallType === 'custom'){ warn('Рельеф борта работает только со стандартным и ступенчатым бортом.'); relOn = false; }
+  if (relOn && !(p.relH >= 0.4 && p.relPitch >= 2.5 && p.relMargin >= 0)){ err('Рельеф: высота не меньше 0,4 мм, шаг не меньше 2,5 мм.'); return {msgs}; }
+  const zLo = zBot + p.relMargin + (skirt ? pkTop : 0), zHi = zTop - p.relMargin;
+  if (relOn && zHi - zLo < p.relPitch * 0.8){ warn('Рельеф не поместился по высоте борта — уменьшите шаг или отступ.'); relOn = false; }
   const bands = bandList(pts, zBot, zTop, (stripe ? [stripe.z1, stripe.z2] : []).concat(skirt ? [pkTop] : []));
   const k = scaleK(), letters = [];
   let cellsTotal = 0, bigOnes = 0, emptyInside = false;
@@ -12178,6 +12284,7 @@ function buildAll(p){
       const inStripe = stripe && bd.a >= stripe.z1 - 1e-6 && bd.b <= stripe.z2 + 1e-6;
       body.layers.push({ex, a: bd.a, b: bd.b, role: inStripe ? 'stripe' : 'wall', mat: inStripe ? p.matStripe : p.matWall});
     }
+    if (relOn){ const rg = reliefSkin(A, p, zLo, zHi); if (rg){ body.layers.push({g: rg, ex: [], a: zLo, b: zHi, role: 'wall', mat: p.matWall}); body.pad = p.relH; } }
     const rIn = rMax(pts, (zBot + zTop) / 2);
     if (rIn != null && !off(rIn).length) emptyInside = true;
     if (bm === 'integral'){
@@ -12221,8 +12328,8 @@ function buildAll(p){
       } else warn(`Буква ${li + 1}: поддон слишком узкий и пропал.`);
     }
     for (const pc of pieces){
-      pc.layers = pc.layers.filter(l => l.ex.length);
-      for (const l of pc.layers) l.g = extrude(l.ex, l.a, l.b - l.a);
+      pc.layers = pc.layers.filter(l => l.ex.length || l.g);
+      for (const l of pc.layers) if (!l.g) l.g = extrude(l.ex, l.a, l.b - l.a);
       pc.layers = pc.layers.filter(l => l.g);
     }
     letters.push({index: li + 1, pieces: pieces.filter(pc => pc.layers.length), w: (bb.x1 - bb.x0) / S, h: (bb.y1 - bb.y0) / S});
@@ -12240,7 +12347,7 @@ function buildAll(p){
 // раскладка деталей по столам: «первая подходящая полка» — крупные сначала, каждую кладём на первую полку, где хватает места
 function packPieces(R){
   const bed = R.p.bed, m = 5, gap = 6, list = [], plates = [];
-  for (const L of R.letters) for (const pc of L.pieces){ pc.bb = bboxOf(pc.layers.flatMap(l => l.ex.map(e => e.outer))); list.push(pc); }
+  for (const L of R.letters) for (const pc of L.pieces){ pc.bb = bboxOf(pc.layers.flatMap(l => l.ex.map(e => e.outer))); if (pc.pad){ const d = Math.round(pc.pad * S); pc.bb.x0 -= d; pc.bb.y0 -= d; pc.bb.x1 += d; pc.bb.y1 += d; } list.push(pc); }
   list.sort((a, b) => (b.bb.y1 - b.bb.y0) - (a.bb.y1 - a.bb.y0) || (b.bb.x1 - b.bb.x0) - (a.bb.x1 - a.bb.x0));
   for (const pc of list){
     const w = (pc.bb.x1 - pc.bb.x0) / S, h = (pc.bb.y1 - pc.bb.y0) / S;
@@ -12568,7 +12675,7 @@ const VIS = {
   srcText: () => P.src === 'text', srcFile: () => P.src === 'file',
   standard: () => P.wallType === 'standard', ledge: () => P.wallType === 'ledge', custom: () => P.wallType === 'custom',
   grooveOn: () => P.wallType !== 'custom' && P.faceMode !== 'integral', grooveOff: () => P.wallType !== 'custom' && P.faceMode === 'integral',
-  stripe: () => P.stripeOn, face: () => P.faceMode !== 'none', faceSep: () => P.faceMode === 'separate',
+  rel: () => P.relType !== 'none', stripe: () => P.stripeOn, face: () => P.faceMode !== 'none', faceSep: () => P.faceMode === 'separate',
   back: () => P.backMode !== 'none', tray: () => P.backMode === 'tray',
   pat: () => P.pattern !== 'solid', voronoi: () => P.pattern === 'voronoi', inlay: () => P.pattern !== 'solid' && P.patMode === 'inlay'
 };
@@ -12617,10 +12724,11 @@ function summaries(){
   set('sTop', `${faceTxt} · борт ${P.wallType === 'custom' && profile ? fmt(profile.H) + ' мм, свой профиль' : fmt(P.A) + ' × ' + fmt(P.B) + ' мм'}`);
   set('sBack', {tray: `Поддон ${fmt(P.tBack)} мм, бортик ${fmt(P.lipH)} мм`, integral: `Заодно с бортом, ${fmt(P.tBack)} мм`, none: 'Без задника'}[P.backMode]);
   set('sPat', P.pattern === 'solid' ? 'Без узора' : `${({hex: 'Соты', scales: 'Чешуя', petals: 'Лепестки', voronoi: 'Вороной'})[P.pattern]} ${fmt(P.patSize)} мм на ${P.patOn === 'face' ? 'лице' : 'заднике'}, ${P.patMode === 'inlay' ? 'вторым пластиком' : 'насквозь'}`);
+  set('sRel', P.relType === 'none' ? 'Выключен' : `${{studs: 'Пупырышки', cones: 'Шипы', pyramids: 'Пирамидки', dimples: 'Ямки'}[P.relType]}, ${fmt(P.relH)} мм, шаг ${fmt(P.relPitch)}`);
   set('sStripe', P.stripeOn ? `${fmt(P.stripeH)} мм, пластик ${P.matStripe}` : 'Выключена');
   set('sPrint', `Стол ${fmt(P.bed, 0)} мм · слой ${fmt(P.layerH)} мм`);
   const dot = (id, i) => { const el = $(id); if (el) el.style.setProperty('--c', slotColor(i)); };
-  dot('dotTop', P.matWall); dot('dotBack', P.matBack); dot('dotPat', P.patMode === 'inlay' ? P.matPat : P.matFace); dot('dotStripe', P.stripeOn ? P.matStripe : 0);
+  dot('dotTop', P.matWall); dot('dotRel', P.matWall); dot('dotBack', P.matBack); dot('dotPat', P.patMode === 'inlay' ? P.matPat : P.matFace); dot('dotStripe', P.stripeOn ? P.matStripe : 0);
 }
 function refreshUI(){
   document.querySelectorAll('[data-vis]').forEach(el => { el.hidden = !el.dataset.vis.split(' ').every(n => VIS[n]()); });
