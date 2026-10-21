@@ -191,6 +191,7 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
           <div class="f" data-vis="srcFile">
             <label class="drop" id="dropFile"><span class="dt"><b>Загрузить контур</b><small id="fileInfo">DXF или SVG, текст в кривых. CDR сохраните из CorelDRAW как DXF.</small></span><span class="pill">Выбрать</span><input type="file" id="fileSrc" accept=".dxf,.svg,.cdr,image/svg+xml"></label>
             <label class="f"><span>Ширина надписи, мм</span><input class="in" id="scaleW" data-k="scaleW" inputmode="decimal"></label>
+            <label class="check"><input type="checkbox" id="flipX" data-k="flipX"> Отзеркалить контур — если в файле надпись читается задом наперёд</label>
           </div>
           <div class="picker" id="picker"></div>
           <p class="hint" id="pickHint">Нажмите на букву, чтобы убрать её из модели или вернуть.</p>
@@ -11678,7 +11679,7 @@ const FONT_DATA = {
 };
 
 const DEF = {
-  src: 'text', text: 'КОФЕ', font: 'montserrat', txtH: 120, txtGap: 12,
+  src: 'text', flipX: false, text: 'КОФЕ', font: 'montserrat', txtH: 120, txtGap: 12,
   scaleW: 394, corner: 'miter', bed: 256,
   wallType: 'standard', A: 40, B: 1.5, C: 3, G: 0.75, E: 2, alpha: 45, matWall: 1,
   stripeOn: false, stripeH: 10, stripeFrom: '', layerH: 0.2, matStripe: 4,
@@ -11977,7 +11978,8 @@ function dxfToItems(text){
 function computeParts(items){
   let all = [];
   for (const it of items){
-    const ps = it.polys.filter(pl => pl.length > 2).map(pl => pl.map(q => ({X: Math.round(q.x * S), Y: Math.round(q.y * S)})));
+    const fx = P.src === 'file' && P.flipX ? -1 : 1;
+    const ps = it.polys.filter(pl => pl.length > 2).map(pl => pl.map(q => ({X: Math.round(fx * q.x * S), Y: Math.round(q.y * S)})));
     if (ps.length) all = all.concat(clip(CT.ctUnion, ps, null, it.rule === 'evenodd' ? PFT.pftEvenOdd : PFT.pftNonZero));
   }
   const ex = toEx(all).filter(e => exArea(e) > 0.5);
@@ -12944,7 +12946,7 @@ function onParam(k){
   save();
   if (/^c\d$/.test(k)){ for (const i in matCache) matFor(+i); if (V) V.dirty = true; refreshUI(); return; }
   if (k === 'text' || k === 'font' || k === 'txtH' || k === 'txtGap'){ summaries(); clearTimeout(srcTimer); srcTimer = setTimeout(rebuildSource, 300); return; }
-  if (k === 'src'){ refreshUI(); rebuildSource(); return; }
+  if (k === 'src' || k === 'flipX'){ refreshUI(); rebuildSource(); return; }
   if (k === 'scaleW' || k === 'bed') needFit = true;
   refreshUI(); schedule();
 }
