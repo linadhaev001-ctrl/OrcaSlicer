@@ -12402,11 +12402,11 @@ function renderResult(fit){
   v.deco.children.forEach(o => { o.geometry && o.geometry.dispose(); });
   v.deco.clear();
   const addFloor = (cx, cy, w, h) => {
-    const side = Math.max(600, Math.ceil((Math.max(w, h) + 300) / 100) * 100);
-    const fl = new THREE.Mesh(new THREE.PlaneGeometry(side, side), new THREE.MeshBasicMaterial({color: 0x2b2f33}));
-    fl.position.set(cx, cy, -0.06); v.deco.add(fl);
-    const g1 = new THREE.GridHelper(side, side / 10, 0x3a3f45, 0x3a3f45); g1.rotation.x = Math.PI / 2; g1.position.set(cx, cy, -0.04); v.deco.add(g1);
-    const g2 = new THREE.GridHelper(side, side / 100, 0x5d646d, 0x5d646d); g2.rotation.x = Math.PI / 2; g2.position.set(cx, cy, -0.02); v.deco.add(g2);
+    const side = Math.max(1000, Math.ceil((Math.max(w, h) + 400) / 100) * 100);
+    const mk = (div, col, op, z) => { const g = new THREE.GridHelper(side, div, col, col); g.rotation.x = Math.PI / 2; g.position.set(cx, cy, z);
+      (Array.isArray(g.material) ? g.material : [g.material]).forEach(m => { m.transparent = true; m.opacity = op; m.depthWrite = false; }); v.deco.add(g); };
+    mk(side / 10, 0x3b6a8f, 0.35, -0.04);
+    mk(side / 100, 0x5aa0d0, 0.6, -0.02);
   };
   const hud = $('hud'), busy = $('busyChip');
   hud.innerHTML = ''; if (busy) hud.appendChild(busy);
