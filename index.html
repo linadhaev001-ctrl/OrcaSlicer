@@ -145,6 +145,8 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
 .tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .tiles.t4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .tile .ic{display:block;margin:0 auto 4px;width:34px;height:44px}
+.tile .pic{display:block;margin:0 auto 4px;width:42px;height:42px;border-radius:6px}
+.pats .tile{font-size:12px;padding:7px 3px}
 .tile .ic .w{fill:currentColor;fill-opacity:.35;stroke:currentColor;stroke-width:1.4;stroke-linejoin:round}
 .tile .ic .base{stroke:currentColor;stroke-opacity:.45;stroke-dasharray:2 2}
 .patrow{display:grid;grid-template-columns:120px minmax(0,1fr);gap:12px;align-items:start}
@@ -329,26 +331,21 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
       <details class="blk" id="blkPat">
         <summary><span class="dot" id="dotPat"></span><span class="bt"><b>Узор на панели</b><small id="sPat"></small></span><span class="chev"></span></summary>
         <div class="bb">
-          <div class="tiles" id="tiles">
-            <button type="button" class="tile" data-pat="solid">Без узора</button>
-            <button type="button" class="tile" data-pat="hex">Соты</button>
-            <button type="button" class="tile" data-pat="scales">Чешуя</button>
-            <button type="button" class="tile" data-pat="petals">Лепестки</button>
-            <button type="button" class="tile" data-pat="voronoi">Вороной</button>
-          </div>
+          <div class="tiles t4 pats" id="tiles"></div>
           <div data-vis="pat" class="f">
             <div class="g2">
               <label class="f"><span>Панель</span><select class="in" id="patOn" data-k="patOn"><option value="face">Лицо</option><option value="back">Задник</option></select></label>
               <label class="f"><span>Как сделать</span><select class="in" id="patMode" data-k="patMode"><option value="through">Сквозные отверстия</option><option value="inlay">Второй пластик насквозь</option></select></label>
             </div>
+            <div class="g3">
+              <label class="f"><span>Размер</span><input class="in" id="patSize" data-k="patSize" inputmode="decimal"></label>
+              <label class="f"><span>Перемычка</span><input class="in" id="patRib" data-k="patRib" inputmode="decimal"></label>
+              <label class="f"><span>Рамка</span><input class="in" id="patFrame" data-k="patFrame" inputmode="decimal"></label>
+            </div>
             <div class="patrow">
               <div class="sample" id="sample"></div>
               <div class="f">
-                <div class="g3">
-                  <label class="f"><span>Размер</span><input class="in" id="patSize" data-k="patSize" inputmode="decimal"></label>
-                  <label class="f"><span>Перемычка</span><input class="in" id="patRib" data-k="patRib" inputmode="decimal"></label>
-                  <label class="f"><span>Рамка</span><input class="in" id="patFrame" data-k="patFrame" inputmode="decimal"></label>
-                </div>
+                <label class="f"><span>Поворот узора, °</span><input class="in" id="patRot" data-k="patRot" inputmode="decimal" data-step="15"></label>
                 <label class="range" data-vis="voronoi"><span id="seedLbl">Вариант узора · 0</span><input type="range" id="patSeed" data-k="patSeed" min="0" max="30" step="1"></label>
               </div>
             </div>
@@ -363,14 +360,16 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
         <div class="bb">
           <div class="sub" style="margin-top:0">Форма борта снаружи</div>
           <div class="tiles t4" id="decoTiles"></div>
-          <div class="g3" data-vis="deco">
+          <div class="g2" data-vis="deco">
+            <label class="f"><span>Угол ската, ° (до 45)</span><input class="in" id="decoAng" data-k="decoAng" inputmode="decimal" data-step="1"></label>
             <label class="f"><span>Вылет наружу, мм</span><input class="in" id="decoE" data-k="decoE" inputmode="decimal"></label>
             <label class="f" data-vis="decoN"><span id="decoNLbl">Сколько, шт</span><input class="in" id="decoN" data-k="decoN" inputmode="decimal" data-step="1"></label>
             <label class="f"><span>Ровно у краёв, мм</span><input class="in" id="decoPad" data-k="decoPad" inputmode="decimal"></label>
           </div>
+          <div class="stripeInfo" id="decoAngInfo" data-vis="deco"></div>
           <p class="hint" id="decoNote" data-vis="deco"></p>
           <div class="sub">Рельеф</div>
-          <label class="f wide"><span>Рельеф снаружи борта</span><select class="in" id="relType" data-k="relType"><option value="none">Без рельефа</option><option value="studs">Пупырышки (полусферы)</option><option value="cones">Шипы (конусы)</option><option value="pyramids">Пирамидки</option><option value="dimples">Ямки (соты)</option></select></label>
+          <label class="f wide"><span>Рельеф снаружи борта</span><select class="in" id="relType" data-k="relType"><option value="none">Без рельефа</option><option value="studs">Пупырышки (полусферы)</option><option value="cones">Шипы (конусы)</option><option value="pyramids">Пирамидки</option><option value="dimples">Ямки (соты)</option><option value="hexes">Соты выпуклые</option><option value="scales">Чешуя рыбья</option><option value="bricks">Кирпичная кладка</option><option value="knurl">Накатка (ромбы)</option><option value="vribs">Рёбра вертикальные</option><option value="flutes">Каннелюры (желобки)</option><option value="hribs">Кольца горизонтальные</option><option value="twist">Витые (по спирали)</option><option value="waves">Волны</option><option value="stone">Камень</option></select></label>
           <div class="g2" data-vis="rel">
             <label class="f"><span>Высота рельефа, мм</span><input class="in" id="relH" data-k="relH" inputmode="decimal"></label>
             <label class="f"><span>Шаг рисунка, мм</span><input class="in" id="relPitch" data-k="relPitch" inputmode="decimal"></label>
@@ -11776,8 +11775,8 @@ const DEF = {
   snapOn: false, snapH: 0.4, snapLen: 8, snapStep: 100,
   filType: 'pla', filPrice: 1500, filExtra: 10,
   relType: 'none', relH: 1.2, relPitch: 6, relMargin: 1,
-  decoType: 'none', decoE: 3, decoN: 2, decoPad: 0,
-  patOn: 'face', patMode: 'through', pattern: 'solid', patSize: 12, patRib: 1.2, patFrame: 2, patSeed: 0, matPat: 3,
+  decoType: 'none', decoE: 3, decoN: 2, decoPad: 0, decoAng: 0,
+  patOn: 'face', patMode: 'through', pattern: 'solid', patSize: 12, patRib: 1.2, patFrame: 2, patSeed: 0, patRot: 0, matPat: 3,
   c1: '#e2271c', c2: '#f4f2ec', c3: '#26282c', c4: '#f2b632'
 };
 const LS = 'bukvy-generator-v3';
@@ -12130,25 +12129,37 @@ function profileOf(p, msgs){
   return {pts, H: A, W: B + p.E, kind: 'ledge'};
 }
 // ===== фигурный борт: наружная сторона выгибается наружу (бочка, волна, зигзаг…), внутренняя остаётся ровной =====
-const DECO = {none: 'Ровный', barrel: 'Бочка', pillows: 'Подушки', wave: 'Волна', zigzag: 'Зигзаг «М»', ribs: 'Рёбра', shingle: 'Черепица', slope: 'Наклон'};
-const decoOne = t => t === 'barrel' || t === 'slope';   // формы без количества
+const DECO = {none: 'Ровный', barrel: 'Бочка', pillows: 'Подушки', wave: 'Волна', zigzag: 'Зигзаг «М»', ribs: 'Рёбра', shingle: 'Черепица', slope: 'Наклон',
+  saw: 'Пила', steps: 'Ступени', beads: 'Валики', bell: 'Колокол', cornice: 'Карниз', plinth: 'Цоколь', drop: 'Капля'};
+const decoOne = t => t === 'barrel' || t === 'slope' || t === 'bell' || t === 'cornice' || t === 'plinth' || t === 'drop';   // формы без количества
 // точки наружной линии по высоте зоны [z1, z2]: [{z, d}] снизу вверх, d — вылет наружу, мм; up — борт печатается лицом вверх
 function decoLine(type, z1, z2, N, e, up, step){
   step = step || 0.1;
   const Z = z2 - z1, out = [];
   const add = (z, d) => { const l = out[out.length - 1]; if (!l || Math.abs(l.z - z) > 1e-7 || Math.abs(l.d - d) > 1e-7) out.push({z, d}); };
-  if (type === 'barrel' || type === 'pillows' || type === 'wave'){
-    const f = u => type === 'barrel' ? e * Math.sin(Math.PI * u) : type === 'pillows' ? e * Math.abs(Math.sin(Math.PI * N * u)) : e * (1 - Math.cos(2 * Math.PI * N * u)) / 2;
+  const SMOOTH = {barrel: 1, pillows: 1, wave: 1, bell: 1, drop: 1, beads: 1, cornice: 1, plinth: 1};
+  if (SMOOTH[type]){
+    // плавные формы: d(u), u = 0…1 по высоте зоны; на концах d = 0
+    const g0 = Math.exp(-1 / (2 * 0.17 * 0.17) * 0.25), zr = Math.min(0.5, e / Z);   // карниз/цоколь: возврат ровно под 45°
+    const f = u => type === 'barrel' ? e * Math.sin(Math.PI * u)
+      : type === 'pillows' ? e * Math.abs(Math.sin(Math.PI * N * u))
+      : type === 'wave' ? e * (1 - Math.cos(2 * Math.PI * N * u)) / 2
+      : type === 'bell' ? e * Math.max(0, (Math.exp(-Math.pow(u - 0.5, 2) / (2 * 0.17 * 0.17)) - g0) / (1 - g0))
+      : type === 'drop' ? e * 27 / 4 * u * (1 - u) * (1 - u)
+      : type === 'beads' ? (() => { const v = (u * N) % 1, a = 0.15, b = 0.85; return v > a && v < b ? e * Math.sin(Math.PI * (v - a) / (b - a)) : 0; })()
+      : type === 'cornice' ? (u < 1 - zr ? e * Math.pow(u / (1 - zr), 2) : e * (1 - u) / zr)
+      : (u < zr ? e * u / zr : e * Math.pow((1 - u) / (1 - zr), 2));
     // частая выборка, потом прореживание: шаг по вылету ≤ step или по высоте ≤ 2 мм; вершины и впадины сохраняем
     const M = Math.max(64, Math.ceil(Z / 0.05)), us = [];
     for (let i = 0; i <= M; i++) us.push(i / M);
-    const nk = type === 'barrel' ? 1 : type === 'pillows' ? N : 2 * N;
+    const nk = type === 'pillows' ? N : type === 'wave' ? 2 * N : type === 'beads' ? 2 * N : 1;
     for (let k = 1; k < nk * 2; k++) us.push(k / (nk * 2));
+    if (type === 'cornice') us.push(1 - zr); if (type === 'plinth') us.push(zr);
     us.sort((a, b) => a - b);
     let last = null;
     for (let i = 0; i < us.length; i++){
       const u = us[i], d = i === 0 || i === us.length - 1 ? 0 : f(u), z = z1 + u * Z;
-      const extreme = Math.abs(Math.round(u * nk * 2) - u * nk * 2) < 1e-9;
+      const extreme = Math.abs(Math.round(u * nk * 2) - u * nk * 2) < 1e-9 || (type === 'cornice' && Math.abs(u - (1 - zr)) < 1e-12) || (type === 'plinth' && Math.abs(u - zr) < 1e-12);
       if (!last || i === us.length - 1 || extreme || Math.abs(d - last.d) >= step || z - last.z >= 2){ add(z, d); last = {z, d}; }
     }
   } else if (type === 'zigzag'){
@@ -12157,6 +12168,16 @@ function decoLine(type, z1, z2, N, e, up, step){
     const L = Z / N, b = 0.7 * L, c = Math.min(e, b * 0.4), top = b - 2 * c;
     add(z1, 0);
     for (let k = 0; k < N; k++){ const s0 = z1 + k * L + (L - b) / 2; add(s0, 0); add(s0 + c, e); add(s0 + c + top, e); add(s0 + b, 0); }
+    add(z2, 0);
+  } else if (type === 'saw'){
+    // пила: пологий подъём наружу, возврат под 45°
+    const L = Z / N, c = Math.min(e, L / 2);
+    for (let k = 0; k < N; k++){ const za = z1 + k * L; add(za, 0); add(za + L - c, e); add(za + L, 0); }
+  } else if (type === 'steps'){
+    // ступени наружу (подъём каждой под 45°), сверху возврат под 45°
+    const need = 2 * e, kk = need > Z ? Z / need : 1, r = e / N * kk, fl = Math.max(0, (Z - need * kk) / N);
+    let z = z1; add(z, 0);
+    for (let k = 0; k < N; k++){ z += r; add(z, e * (k + 1) / N); z += fl; add(z, e * (k + 1) / N); }
     add(z2, 0);
   } else if (type === 'slope'){
     // наклон: ровная стенка расширяется к лицу, без изгибов
@@ -12506,11 +12527,17 @@ function weldGeom(pos){
   return g;
 }
 // страховка: если после сборки остались мелкие дыры (петли из открытых рёбер — следы округления на вырожденных местах), закрываем их
-function closeHoles(pos){
+function closeHoles(pos, depth){
   const id = new Map(), P = [], key = (x, y, z) => x + ',' + y + ',' + z;
   const vi = (x, y, z) => { const k = key(x, y, z); let i = id.get(k); if (i === undefined){ i = P.length; id.set(k, i); P.push([x, y, z]); } return i; };
   const E = new Map(), T = [];
   for (let i = 0; i < pos.length; i += 9){ const a = vi(pos[i], pos[i + 1], pos[i + 2]), b = vi(pos[i + 3], pos[i + 4], pos[i + 5]), c = vi(pos[i + 6], pos[i + 7], pos[i + 8]); T.push([a, b, c]); for (const [u, w] of [[a, b], [b, c], [c, a]]) E.set(u + '>' + w, (E.get(u + '>' + w) || 0) + 1); }
+  // лишняя «игла»: два ребра висят, а третье уже занято дважды — треугольник лишний, выбрасываем и проверяем заново
+  if (!depth){
+    const bad = new Set();
+    T.forEach((t, ti) => { let open = 0, dup = false; for (const [u, w] of [[t[0], t[1]], [t[1], t[2]], [t[2], t[0]]]){ if (!E.has(w + '>' + u)) open++; if ((E.get(u + '>' + w) || 0) >= 2) dup = true; } if (open === 2 && dup) bad.add(ti); });
+    if (bad.size){ const keep = []; for (let ti = 0; ti < T.length; ti++) if (!bad.has(ti)) for (let j = 0; j < 9; j++) keep.push(pos[ti * 9 + j]); pos.length = 0; for (const v of keep) pos.push(v); return closeHoles(pos, 1); }
+  }
   const nxt = new Map();
   for (const [k] of E){ const [u, w] = k.split('>').map(Number); if (!E.has(w + '>' + u)){ if (!nxt.has(u)) nxt.set(u, []); nxt.get(u).push(w); } }
   if (!nxt.size) return 0;
@@ -12611,11 +12638,25 @@ function makeCells(I, p, msgs){
   const s = p.patSize, rib = p.patRib;
   if (rib < 0.4){ msgs.push({t: 'err', m: 'Перемычка тоньше 0,4 мм не напечатается.'}); return null; }
   if (s < rib + 1.5){ msgs.push({t: 'err', m: 'Размер узора должен быть больше перемычки хотя бы на 1,5 мм.'}); return null; }
-  const bb = bboxOf(I), x0 = bb.x0 / S - s, y0 = bb.y0 / S - s, x1 = bb.x1 / S + s, y1 = bb.y1 / S + s;
-  if ((x1 - x0) * (y1 - y0) / (s * s) > 9000){ msgs.push({t: 'warn', m: 'Узор слишком мелкий для такого размера — увеличьте размер узора. Панель оставлена сплошной.'}); return null; }
-  const P2 = pts => pts.map(([x, y]) => ({X: Math.round(x * S), Y: Math.round(y * S)}));
+  const bb = bboxOf(I), t = p.pattern;
+  let x0 = bb.x0 / S - s, y0 = bb.y0 / S - s, x1 = bb.x1 / S + s, y1 = bb.y1 / S + s;
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, rot = ((+p.patRot || 0) % 360) * Math.PI / 180, cr = Math.cos(rot), sr = Math.sin(rot);
+  // поворот узора: строим в повёрнутой системе на круге, накрывающем букву, и поворачиваем точки
+  if (rot){ const R = Math.hypot(x1 - x0, y1 - y0) / 2; x0 = cx - R; x1 = cx + R; y0 = cy - R; y1 = cy + R; }
+  if ((x1 - x0) * (y1 - y0) / (s * s) > 12000){ msgs.push({t: 'warn', m: 'Узор слишком мелкий для такого размера — увеличьте размер узора. Панель оставлена сплошной.'}); return null; }
+  const P2 = pts => pts.map(([x, y]) => { if (rot){ const dx = x - cx, dy = y - cy; x = cx + dx * cr - dy * sr; y = cy + dx * sr + dy * cr; } return {X: Math.round(x * S), Y: Math.round(y * S)}; });
   let cells, frac;
-  if (p.pattern === 'hex'){
+  const gen = patCells(t, s, rib, x0, y0, x1, y1, cx, cy, p);
+  if (gen){
+    if (gen.err){ msgs.push({t: 'warn', m: gen.err + ' Панель оставлена сплошной.'}); return null; }
+    frac = gen.frac;
+    if (gen.lines) cells = clip(CT.ctDifference, I, stroke(gen.lines.map(P2), rib));
+    else {
+      // все ячейки — против часовой: иначе Clipper примет часть из них за дырки
+      const polys = gen.polys.map(q => { const pp = P2(q); return CL.Clipper.Orientation(pp) ? pp : pp.reverse(); });
+      cells = gen.shrink ? offset(offset(polys, -(rib / 2 + gen.shrink), 'miter'), gen.shrink, 'round') : polys;
+    }
+  } else if (p.pattern === 'hex'){
     const r = (s - rib) / Math.sqrt(3), dy = s * Math.sqrt(3) / 2, polys = [];
     for (let j = 0, y = y0; y <= y1; j++, y += dy) for (let x = x0 + (j & 1 ? s / 2 : 0); x <= x1; x += s)
       polys.push(P2([0, 1, 2, 3, 4, 5].map(k => { const a = Math.PI / 2 + k * Math.PI / 3; return [x + r * Math.cos(a), y + r * Math.sin(a)]; })));
@@ -12658,7 +12699,163 @@ function makeCells(I, p, msgs){
   const keep = treeEx(CT.ctIntersection, cells, I).filter(e => exArea(e) >= minA);
   if (!keep.length){ msgs.push({t: 'warn', m: 'Ячейки узора не помещаются в букву — уменьшите размер узора или рамку. Панель оставлена сплошной.'}); return null; }
   const paths = []; keep.forEach(e => { paths.push(e.outer); e.holes.forEach(h => paths.push(h)); });
-  return {paths, count: keep.length};
+  // почти лишние точки (на прямой в пределах 0,01 мм) убираем — иначе на крышке панели остаются щели в сетке
+  const cleaned = CL.Clipper.CleanPolygons(paths, 10).filter(q => q.length >= 3);
+  return {paths: cleaned, count: keep.length};
+}
+
+// новые узоры: ячейки (многоугольники-отверстия, между ними перемычка rib) или линии (перемычки по линиям)
+// координаты — мм; возвращает {polys | lines, frac, shrink?} или null, если узор старый (соты, чешуя, лепестки, вороной)
+function patCells(t, s, rib, x0, y0, x1, y1, cx, cy, p){
+  const polys = [], lines = [], TAU = Math.PI * 2;
+  const segN = r => Math.max(12, Math.min(48, Math.round(r * 3)));
+  const circ = (x, y, r) => { const n = segN(r), o = []; for (let k = 0; k < n; k++){ const a = TAU * k / n; o.push([x + r * Math.cos(a), y + r * Math.sin(a)]); } return o; };
+  const reg = (x, y, r, n, a0) => { const o = []; for (let k = 0; k < n; k++){ const a = a0 + TAU * k / n; o.push([x + r * Math.cos(a), y + r * Math.sin(a)]); } return o; };
+  const star = (x, y, R, ri, n) => { const o = []; for (let k = 0; k < 2 * n; k++){ const a = Math.PI / 2 + Math.PI * k / n, r = k & 1 ? ri : R; o.push([x + r * Math.cos(a), y + r * Math.sin(a)]); } return o; };
+  const polar = (x, y, f, n) => { const o = []; for (let k = 0; k < n; k++){ const a = TAU * k / n, r = f(a); o.push([x + r * Math.cos(a), y + r * Math.sin(a)]); } return o; };
+  const hexGrid = fn => { const dy = s * Math.sqrt(3) / 2; for (let j = 0, y = y0; y <= y1 + s; j++, y += dy) for (let x = x0 + (j & 1 ? s / 2 : 0); x <= x1 + s; x += s) fn(x, y, j); };
+  const sqGrid = (fn, stag) => { for (let j = 0, y = y0; y <= y1 + s; j++, y += s) for (let x = x0 + (stag && j & 1 ? s / 2 : 0); x <= x1 + s; x += s) fn(x, y, j); };
+  const tooSmall = m => ({err: m || 'Размер узора слишком мал для такой перемычки — увеличьте размер или уменьшите перемычку.'});
+  if (t === 'square'){
+    const a = s - rib; sqGrid((x, y) => polys.push([[x, y], [x + a, y], [x + a, y + a], [x, y + a]]));
+    return {polys, frac: 0.2};
+  }
+  if (t === 'diamond'){
+    const h = (s - rib * Math.SQRT2) / 2; if (h < 0.6) return tooSmall();
+    for (let j = 0, y = y0; y <= y1 + s; j++, y += s / 2) for (let x = x0 + (j & 1 ? s / 2 : 0); x <= x1 + s; x += s) polys.push([[x - h, y], [x, y - h], [x + h, y], [x, y + h]]);
+    return {polys, frac: 0.15};
+  }
+  if (t === 'tri'){
+    const tt = s * Math.sqrt(3) / 2;
+    for (let j = 0, y = y0; y <= y1 + s; j++, y += tt){ const o = j & 1 ? s / 2 : 0;
+      for (let x = x0 - s + o; x <= x1 + s; x += s){ polys.push([[x, y], [x + s, y], [x + s / 2, y + tt]]); polys.push([[x + s / 2, y + tt], [x + s, y], [x + 1.5 * s, y + tt]]); } }
+    return {polys, frac: 0.1, shrink: Math.min(0.1 * s, 1)};
+  }
+  if (t === 'circles'){
+    const r = (s - rib) / 2; hexGrid((x, y) => polys.push(circ(x, y, r)));
+    return {polys, frac: 0.15};
+  }
+  if (t === 'bubbles'){
+    // пузыри разного размера, случайно, не ближе перемычки друг к другу; сначала крупные, потом мелкие в щели
+    const R = rng((p.patSeed | 0) + 101), W = x1 - x0, H = y1 - y0, cell = s, grid = new Map(), rMax = 0.64 * s;
+    for (const f of [0.55, 0.42, 0.32, 0.24]){
+      const r0 = Math.max(0.8, f * s), tries = Math.min(150000, Math.ceil(W * H / (r0 * r0) * 1.6));
+      for (let k = 0; k < tries; k++){
+        const r = r0 * (0.85 + 0.3 * R()), x = x0 + R() * W, y = y0 + R() * H;
+        const gx = Math.floor(x / cell), gy = Math.floor(y / cell), sp = Math.ceil((r + rMax + rib) / cell);
+        let ok = true;
+        for (let i = -sp; i <= sp && ok; i++) for (let j = -sp; j <= sp && ok; j++){
+          const l = grid.get((gx + i) + ',' + (gy + j)); if (!l) continue;
+          for (const c of l) if (Math.hypot(c[0] - x, c[1] - y) < r + c[2] + rib){ ok = false; break; }
+        }
+        if (!ok) continue;
+        const key = gx + ',' + gy; if (!grid.has(key)) grid.set(key, []); grid.get(key).push([x, y, r]);
+        polys.push(circ(x, y, r));
+      }
+    }
+    return {polys, frac: 0.03};
+  }
+  if (t === 'brick'){
+    const hb = s / 2; if (hb - rib < 0.6) return tooSmall('Для кирпичиков размер должен быть больше двух перемычек.');
+    for (let j = 0, y = y0; y <= y1 + s; j++, y += hb) for (let x = x0 - (j & 1 ? s / 2 : 0); x <= x1 + s; x += s) polys.push([[x, y], [x + s - rib, y], [x + s - rib, y + hb - rib], [x, y + hb - rib]]);
+    return {polys, frac: 0.1};
+  }
+  if (t === 'herring'){
+    // ёлочка-паркет: дощечки 2:1, повёрнуты на 45°
+    const u = s / 2, c45 = Math.SQRT1_2, R = Math.hypot(x1 - x0, y1 - y0) / 2 + 2 * s, n = Math.ceil(R / u) + 3, nm = Math.ceil(R / (4 * u)) + 2;
+    const tr = ([a, b]) => [cx + (a * c45 - b * c45) * u, cy + (a * c45 + b * c45) * u];
+    const rect = (a0, b0, a1, b1) => [[a0, b0], [a1, b0], [a1, b1], [a0, b1]].map(tr);
+    for (let m = -nm; m <= nm; m++) for (let k = -n; k <= n; k++){ const ox = 4 * m; polys.push(rect(ox + k, k, ox + k + 2, k + 1)); polys.push(rect(ox + k + 2, k - 1, ox + k + 3, k + 1)); }
+    return {polys, frac: 0.1, shrink: 0.05};
+  }
+  if (t === 'octagon'){
+    const F = s - rib, Ro = F / 2 / Math.cos(Math.PI / 8), h2 = 0.2929 * s - 0.7071 * rib;
+    sqGrid((x, y) => { polys.push(reg(x, y, Ro, 8, Math.PI / 8)); if (h2 > 0.5) polys.push([[x + s / 2 - h2, y + s / 2], [x + s / 2, y + s / 2 - h2], [x + s / 2 + h2, y + s / 2], [x + s / 2, y + s / 2 + h2]]); });
+    return {polys, frac: 0.06};
+  }
+  if (t === 'cross'){
+    // крестики: решётка (2u, u), (−u, 2u) — кресты из 5 клеток ложатся без зазоров
+    const u = s / 2, a = u / 2, R = Math.hypot(x1 - x0, y1 - y0) / 2 + 2 * s, n = Math.ceil(R / u) + 2;
+    const shape = [[-a, -3 * a], [a, -3 * a], [a, -a], [3 * a, -a], [3 * a, a], [a, a], [a, 3 * a], [-a, 3 * a], [-a, a], [-3 * a, a], [-3 * a, -a], [-a, -a]];
+    for (let i = -n; i <= n; i++) for (let j = -n; j <= n; j++){
+      const x = cx + 2 * u * i - u * j, y = cy + u * i + 2 * u * j;
+      if (x < x0 - 2 * s || x > x1 + 2 * s || y < y0 - 2 * s || y > y1 + 2 * s) continue;
+      polys.push(shape.map(([dx, dy]) => [x + dx, y + dy]));
+    }
+    if (u - rib < 0.6) return tooSmall('Для крестиков размер должен быть больше двух перемычек.');
+    return {polys, frac: 0.08, shrink: 0.05};
+  }
+  if (t === 'stars' || t === 'snow'){
+    const R = (s - rib) / 2; hexGrid((x, y) => polys.push(t === 'stars' ? star(x, y, R, 0.47 * R, 5) : star(x, y, R, 0.5 * R, 6)));
+    return {polys, frac: 0.06};
+  }
+  if (t === 'hearts'){
+    // сердечко по известной формуле; вписываем в квадрат (s − rib)
+    const raw = []; for (let k = 0; k < 48; k++){ const a = TAU * k / 48; raw.push([16 * Math.pow(Math.sin(a), 3), 13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a)]); }
+    let bx0 = Infinity, bx1 = -Infinity, by0 = Infinity, by1 = -Infinity; for (const [x, y] of raw){ bx0 = Math.min(bx0, x); bx1 = Math.max(bx1, x); by0 = Math.min(by0, y); by1 = Math.max(by1, y); }
+    const k = (s - rib) / Math.max(bx1 - bx0, by1 - by0), mx = (bx0 + bx1) / 2, my = (by0 + by1) / 2;
+    sqGrid((x, y) => polys.push(raw.map(([u, v]) => [x + (u - mx) * k, y + (v - my) * k])), true);
+    return {polys, frac: 0.08};
+  }
+  if (t === 'flowers'){
+    const R = (s - rib) / 2; hexGrid((x, y) => polys.push(polar(x, y, a => R * (0.62 + 0.38 * Math.cos(5 * a + Math.PI / 2)), 60)));
+    return {polys, frac: 0.08};
+  }
+  if (t === 'leaves'){
+    // листики-линзы, через один повёрнуты на ±45°
+    const l = 0.95 * (s - rib), a = l / 2, b = l * 0.45 / 2, Rr = (a * a + b * b) / (2 * b), lens = [];
+    for (let k = 0; k <= 12; k++){ const x = -a + 2 * a * k / 12; lens.push([x, Math.sqrt(Math.max(0, Rr * Rr - x * x)) - (Rr - b)]); }
+    for (let k = 11; k >= 1; k--){ const x = -a + 2 * a * k / 12; lens.push([x, -(Math.sqrt(Math.max(0, Rr * Rr - x * x)) - (Rr - b))]); }
+    sqGrid((x, y, j) => { const i = Math.round((x - x0) / s), ang = ((i + j) & 1 ? 1 : -1) * Math.PI / 4, c = Math.cos(ang), sn = Math.sin(ang);
+      polys.push(lens.map(([u, v]) => [x + s / 2 + u * c - v * sn, y + s / 2 + u * sn + v * c])); });
+    return {polys, frac: 0.06};
+  }
+  if (t === 'quatrefoil'){
+    // марокканский четырёхлистник: 4 дуги
+    const E = (s - rib) / 2, r = E / 1.75, d = 0.75 * r, tp = (d + Math.sqrt(2 * r * r - d * d)) / 2, th = Math.atan2(tp, tp - d), shape = [];
+    for (let q = 0; q < 4; q++){ const ph = q * Math.PI / 2, ox = d * Math.cos(ph), oy = d * Math.sin(ph);
+      for (let k = 0; k < 10; k++){ const a = ph - th + 2 * th * k / 10; shape.push([ox + r * Math.cos(a), oy + r * Math.sin(a)]); } }
+    sqGrid((x, y) => polys.push(shape.map(([u, v]) => [x + u, y + v])), true);
+    return {polys, frac: 0.08};
+  }
+  if (t === 'slots'){
+    const pz = s / 2, w = pz - rib, rr = w / 2, L = 2 * s - rib; if (w < 0.6) return tooSmall('Для прорезей размер должен быть больше двух перемычек.');
+    for (let j = 0, y = y0; y <= y1 + s; j++, y += pz) for (let x = x0 - (j & 1 ? s : 0); x <= x1 + s; x += 2 * s){
+      const o = [], ax = x + rr, bx = x + L - rr, yc = y + rr;
+      for (let k = 0; k <= 8; k++){ const a = -Math.PI / 2 + Math.PI * k / 8; o.push([bx + rr * Math.cos(a), yc + rr * Math.sin(a)]); }
+      for (let k = 0; k <= 8; k++){ const a = Math.PI / 2 + Math.PI * k / 8; o.push([ax + rr * Math.cos(a), yc + rr * Math.sin(a)]); }
+      polys.push(o);
+    }
+    return {polys, frac: 0.06};
+  }
+  // ---- узоры линиями: перемычки идут по линиям, всё между ними — отверстия
+  if (t === 'waves'){
+    for (let y = y0; y <= y1 + s; y += s){ const pts = []; for (let x = x0 - s; x <= x1 + s; x += s / 8) pts.push([x, y + 0.3 * s * Math.sin(TAU * (x - x0) / (2 * s))]); lines.push(pts); }
+    return {lines, frac: 0.05};
+  }
+  if (t === 'chevron'){
+    for (let y = y0; y <= y1 + s; y += s){ const pts = []; for (let k = 0, x = x0 - s; x <= x1 + s; k++, x += s / 2) pts.push([x, y + (k & 1 ? 0.45 * s : 0)]); lines.push(pts); }
+    return {lines, frac: 0.05};
+  }
+  if (t === 'web' || t === 'rays' || t === 'spiral'){
+    const Rm = Math.hypot(x1 - x0, y1 - y0) / 2 + s;
+    if (t === 'web'){
+      const n = Math.max(8, Math.min(48, Math.round(TAU * Rm * 0.5 / (1.2 * s))));
+      for (let k = 0; k < n; k++){ const a = TAU * k / n; lines.push([[cx, cy], [cx + Rm * Math.cos(a), cy + Rm * Math.sin(a)]]); }
+      for (let r = s; r <= Rm; r += s){ const ring = reg(cx, cy, r, n, 0); ring.push(ring[0]); lines.push(ring); }
+    } else if (t === 'rays'){
+      const n = Math.max(12, Math.min(96, Math.round(TAU * Rm * 0.5 / s)));
+      for (let k = 0; k < n; k++){ const a = TAU * k / n; lines.push([[cx, cy], [cx + Rm * Math.cos(a), cy + Rm * Math.sin(a)]]); }
+      const ring = circ(cx, cy, s); ring.push(ring[0]); lines.push(ring);
+    } else {
+      const b = s / TAU, pts = [];
+      for (let th = 0; b * th <= Rm; ){ const r = b * th; pts.push([cx + r * Math.cos(th), cy + r * Math.sin(th)]); th += Math.min(0.3, s / 6 / Math.max(r, s)); }
+      lines.push(pts);
+      for (let k = 0; k < 6; k++){ const a = TAU * k / 6 + 0.3; lines.push([[cx, cy], [cx + Rm * Math.cos(a), cy + Rm * Math.sin(a)]]); }
+    }
+    return {lines, frac: 0.08};
+  }
+  return null;
 }
 
 /* ================= полоса ================= */
@@ -12691,9 +12888,11 @@ function reliefSkin(A, p, z0, z1, za, zb, merge){
   if (za === undefined){ za = z0; zb = z1; }
   const h = p.relH, pitch = p.relPitch, type = p.relType, e = merge ? 0 : 0.4;
   const rnd = v => merge ? Math.round(v * S) / S : v;
-  const stag = type !== 'pyramids';
-  const nRows = Math.max(1, Math.round((z1 - z0) / (stag ? pitch * 0.866 : pitch))), pz = (z1 - z0) / nRows;
-  const sub = p.__fine ? 6 : 4, K = Math.max(1, Math.round((zb - za) / (pz / sub))), dzs = (zb - za) / K;
+  const stag = type === 'studs' || type === 'cones' || type === 'dimples';
+  const rowK = {studs: 0.866, cones: 0.866, dimples: 0.866, hexes: 0.866, scales: 0.75, bricks: 0.5}[type] || 1;
+  const nRows = Math.max(1, Math.round((z1 - z0) / (pitch * rowK))), pz = (z1 - z0) / nRows;
+  const sharp = type === 'bricks' || type === 'hexes' || type === 'knurl';
+  const sub = sharp ? (p.__fine ? 8 : 6) : (p.__fine ? 6 : 4), K = Math.max(1, Math.round((zb - za) / (pz / sub))), dzs = (zb - za) / K;
   const area = pth => { let s = 0; for (let i = 0; i < pth.length; i++){ const a = pth[i], b = pth[(i + 1) % pth.length]; s += a.X * b.Y - b.X * a.Y; } return s / 2; };
   const sA0 = Math.sign(area(A[0]));
   const pos = [], tri = [], triIn = [], ipts = [], ptSeen = new Set();
@@ -12730,8 +12929,48 @@ function reliefSkin(A, p, z0, z1, za, zb, merge){
       }
       u += eo.len;
     }
+    const fr = x => x - Math.floor(x), triW = x => 1 - 2 * Math.abs(fr(x) - 0.5), cl01 = x => Math.max(0, Math.min(1, x));
+    // гладкий «камень»: шум на сетке шага, по контуру замкнут (период nC)
+    const hsh = (i, j, salt) => { const v = Math.sin(i * 127.1 + j * 311.7 + salt * 74.7 + 17.3) * 43758.5453; return v - Math.floor(v); };
+    const sm = x => x * x * (3 - 2 * x);
+    const vnoise = (a, b, per) => { const i = Math.floor(a), j = Math.floor(b), fa = sm(a - i), fb = sm(b - j), q = (ii, jj) => hsh(((ii % per) + per) % per, jj, per);
+      return (q(i, j) * (1 - fa) + q(i + 1, j) * fa) * (1 - fb) + (q(i, j + 1) * (1 - fa) + q(i + 1, j + 1) * fa) * fb; };
     const disp = (uu, z) => {
       let best = 0;
+      const U = uu / pu, Zr = (z - z0) / pz;
+      if (type === 'vribs'){ const du = U - Math.round(U); best = Math.sqrt(Math.max(0, 1 - Math.pow(2 * du / 0.9, 2))); return h * best; }
+      if (type === 'flutes'){ const du = U - Math.round(U); return h * (1 - 0.85 * Math.sqrt(Math.max(0, 1 - Math.pow(2 * du / 0.8, 2)))); }
+      if (type === 'hribs') return h * triW(Zr);
+      if (type === 'twist') return h * (0.5 + 0.5 * Math.cos(2 * Math.PI * (U + Zr / 2)));
+      if (type === 'knurl') return h * Math.min(triW(U + Zr / 2), triW(U - Zr / 2));
+      if (type === 'waves') return h * (0.5 + 0.5 * Math.cos(2 * Math.PI * (U + 0.25 * Math.sin(Math.PI * Zr))));
+      if (type === 'bricks'){
+        const j = Math.floor(Zr), off = j & 1 ? 0.5 : 0, a = fr(U + off), w = Math.min(0.4, Math.max(0.2, h / pz));
+        const dd = Math.min(Math.min(a, 1 - a) * pu, Math.min(fr(Zr), 1 - fr(Zr)) * pz);
+        return h * cl01(dd / (w * pz));
+      }
+      if (type === 'hexes' || type === 'scales'){
+        const j0 = Math.floor(Zr);
+        if (type === 'hexes'){
+          // выпуклые шестиугольные плитки с канавками
+          const nb = [[pu, 0], [pu / 2, pz], [-pu / 2, pz]].map(([a, b]) => { const l = Math.hypot(a, b); return [a / l, b / l, l / 2]; });
+          let bestD = -Infinity;
+          for (let jj = j0 - 1; jj <= j0 + 1; jj++){
+            const zc = z0 + (jj + 0.5) * pz, off = (jj & 1) ? 0.5 : 0, i = Math.round(U - off), du = uu - (i + off) * pu, dz = z - zc;
+            let dEdge = Infinity; for (const [a, b, hl] of nb) dEdge = Math.min(dEdge, hl - Math.abs(du * a + dz * b));
+            if (dEdge > bestD) bestD = dEdge;
+          }
+          return h * cl01(bestD / (0.16 * pu));
+        }
+        // чешуя: полудиски рядами, толще к нижнему краю
+        const Rr = 0.6 * pu;
+        for (let jj = j0 - 1; jj <= j0 + 2; jj++){
+          const zc = z0 + jj * pz, off = (jj & 1) ? 0.5 : 0, i = Math.round(U - off), du = uu - (i + off) * pu, dz = z - zc, d = Math.hypot(du, dz);
+          if (d < Rr && dz > -0.15 * Rr){ const v = Math.sqrt(1 - (d / Rr) * (d / Rr)) * (0.45 + 0.55 * cl01(1 - dz / Rr)); if (v > best) best = v; }
+        }
+        return h * best;
+      }
+      if (type === 'stone') return h * (0.12 + 0.88 * cl01(0.65 * vnoise(U, Zr, nC) + 0.35 * vnoise(2 * U, 2 * Zr + 9.1, 2 * nC)));
       if (stag){
         const j0 = Math.floor((z - z0) / pz), R = 0.5 * pu * (type === 'dimples' ? 0.92 : type === 'studs' ? 0.96 : 1);
         for (let jj = j0 - 1; jj <= j0 + 1; jj++){
@@ -12810,7 +13049,7 @@ function simplifyPaths(A, tolMm){
 let letterCacheOn = false, letterCacheKey = '';
 const letterCache = new Map();
 const MATK = {wall: 'matWall', stripe: 'matStripe', face: 'matFace', back: 'matBack', pattern: 'matPat'};
-function geomKey(p){ return JSON.stringify(Object.keys(p).sort().filter(k => !/^(c\d|bed|fil[A-Z]\w*)$/.test(k)).map(k => [k, p[k]])) + '|' + (profile ? profile.H + ':' + profile.pts.length + ':' + profile.pts.reduce((s, q) => s + q.r * 7 + q.z, 0) : ''); }
+function geomKey(p){ return JSON.stringify(Object.keys(p).sort().filter(k => !/^(c\d|bed|decoAng|fil[A-Z]\w*)$/.test(k)).map(k => [k, p[k]])) + '|' + (profile ? profile.H + ':' + profile.pts.length + ':' + profile.pts.reduce((s, q) => s + q.r * 7 + q.z, 0) : ''); }
 function pathHash(A){ let h = 2166136261 >>> 0; for (const pth of A){ h = Math.imul(h ^ pth.length, 16777619); for (const q of pth){ h = Math.imul(h ^ q.X, 16777619); h = Math.imul(h ^ q.Y, 16777619); } } return (h >>> 0).toString(36) + ':' + A.length; }
 function buildAll(p){ const it = buildGen(p); let r; do r = it.next(); while (!r.done); return r.value; }
 function* buildGen(p){
@@ -13405,7 +13644,7 @@ function drawDiagram(){
     yb += 22;
     s += hd(yb, minR, 0, cS);
     s += T(X(minR), yb + 20, `${DECO[deco.type]}${decoOne(deco.type) ? '' : ' × ' + deco.N} · вылет ${fmt(deco.out)} мм`, cS);
-    s += T(X(minR), yb + 36, `пустой, стенка ${fmt(deco.B)} мм везде · скат ≤ 45°`, cS, null, false);
+    s += T(X(minR), yb + 36, `пустой, стенка ${fmt(deco.B)} мм везде · скат ${fmt(Math.atan(lineSlope(deco.line)) * 180 / Math.PI, 0)}°`, cS, null, false);
     yb += 36;
   }
   if (tray && lipOn){
@@ -13442,12 +13681,63 @@ function drawDiagram(){
 // значок формы борта: разрез стенки, снаружи — слева
 function decoIcon(t){
   const W = 34, H = 44, xo = 19, wd = 5, kz = 40, e = t === 'barrel' ? 9 : 7;
-  const line = t === 'none' ? [{z: 0, d: 0}, {z: 1, d: 0}] : decoLine(t, 0, 1, decoOne(t) ? 1 : 2, 1, true);
+  const line = t === 'none' ? [{z: 0, d: 0}, {z: 1, d: 0}] : decoLine(t, 0, 1, decoOne(t) ? 1 : 2, 0.15, true).map(q => ({z: q.z, d: q.d / 0.15}));
   const P2 = (q, dx) => `${(xo + dx - q.d * e).toFixed(1)},${(H - 2 - q.z * kz).toFixed(1)}`;
   const pts = line.map(q => P2(q, wd)).concat(line.slice().reverse().map(q => P2(q, 0)));
   return `<svg class="ic" viewBox="0 0 ${W} ${H}" aria-hidden="true"><line class="base" x1="${xo}" y1="1" x2="${xo}" y2="${H - 1}"/><polygon class="w" points="${pts.join(' ')}"/></svg>`;
 }
 function pathD(paths, flipH){ return paths.map(pth => 'M' + pth.map(q => (q.X / S).toFixed(2) + ' ' + (flipH - q.Y / S).toFixed(2)).join('L') + 'Z').join(''); }
+const PATS = {solid: 'Без узора', hex: 'Соты', circles: 'Кружки', bubbles: 'Пузыри', square: 'Квадраты', diamond: 'Ромбы', tri: 'Треугольники', octagon: 'Восьмиугольники', brick: 'Кирпичики',
+  herring: 'Паркет-ёлочка', cross: 'Крестики', slots: 'Прорези', scales: 'Чешуя', petals: 'Лепестки', quatrefoil: 'Марокко', leaves: 'Листья', flowers: 'Цветы',
+  stars: 'Звёзды', snow: 'Снежинки', hearts: 'Сердечки', voronoi: 'Вороной', waves: 'Волны', chevron: 'Зигзаг', web: 'Паутина', rays: 'Солнце', spiral: 'Спираль'};
+// плитки выбора узора: у каждой — маленький живой образец
+let patTilesBuilt = false;
+function buildPatTiles(){
+  const box = $('tiles'); if (!box || patTilesBuilt) return; patTilesBuilt = true;
+  const side = 30, sq = [[{X: 0, Y: 0}, {X: side * S, Y: 0}, {X: side * S, Y: side * S}, {X: 0, Y: side * S}]];
+  for (const key in PATS){
+    let pic = `<rect x="0" y="0" width="${side}" height="${side}" rx="2" fill="currentColor" fill-opacity=".55"/>`;
+    if (key !== 'solid'){ const c = makeCells(sq, {pattern: key, patSize: 8.5, patRib: 1.3, patSeed: 3, patRot: 0}, []); if (c) pic += `<path d="${pathD(c.paths, side)}" fill="var(--soft)" fill-rule="evenodd"/>`; }
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'tile'; b.dataset.pat = key;
+    b.innerHTML = `<svg class="pic" viewBox="0 0 ${side} ${side}" aria-hidden="true">${pic}</svg><span>${PATS[key]}</span>`;
+    box.appendChild(b);
+  }
+}
+// угол самого крутого ската фигурного борта (от вертикали) и обратная задача: вылет под нужный угол
+const lineSlope = line => { let s = 0; for (let i = 1; i < line.length; i++){ const dz = line[i].z - line[i - 1].z; if (dz > 1e-7) s = Math.max(s, Math.abs(line[i].d - line[i - 1].d) / dz); } return s; };
+function decoZoneUI(){
+  const prof = profileOf(P, []); if (!prof) return null;
+  const H = prof.H, zBot = P.backMode === 'integral' ? P.tBack : 0, zTop = P.faceMode === 'integral' ? H - P.tFace : H;
+  return {prof, zBot, zTop, zn: decoZone(P, prof, zBot, zTop)};
+}
+function decoState(){
+  if (P.decoType === 'none' || !DECO[P.decoType]) return null;
+  const z = decoZoneUI(); if (!z) return null;
+  const d = decoProfile(P, z.prof, z.zBot, z.zTop, P.faceMode === 'integral', []); if (!d) return null;
+  return {d, ang: Math.atan(lineSlope(d.line)) * 180 / Math.PI};
+}
+function eForAngle(a){
+  const t = P.decoType, z = decoZoneUI(); if (!z || !z.zn || !DECO[t] || t === 'none') return null;
+  const N = decoOne(t) ? 1 : Math.max(1, Math.round(P.decoN || 1)), tg = Math.tan(Math.min(45, Math.max(0.5, a)) * Math.PI / 180);
+  let lo = 0, hi = 30;
+  for (let i = 0; i < 40; i++){ const m = (lo + hi) / 2; if (lineSlope(decoLine(t, z.zn.z1, z.zn.z2, N, m, true, 0.05)) > tg) hi = m; else lo = m; }
+  return Math.floor(lo * 100) / 100;
+}
+function drawDecoAng(){
+  const box = $('decoAngInfo'); if (!box) return;
+  const st = decoState(), inp = $('decoAng');
+  if (!st){ box.textContent = P.decoType === 'none' ? '' : 'Форма не помещается по высоте борта — смотрите сообщения под столом.'; return; }
+  const a = Math.round(st.ang * 10) / 10;
+  if (inp && document.activeElement !== inp){ P.decoAng = a; inp.value = fmt(a, 1); }
+  const want = +P.decoAng;
+  box.innerHTML = '';
+  const line = (t, b) => { const d = document.createElement('div'); d.append(t + ' '); const e = document.createElement('b'); e.textContent = b; d.appendChild(e); box.appendChild(d); };
+  line('Самый крутой скат сейчас:', `${fmt(a, 1)}° от вертикали`);
+  line('Вылет наружу:', `${fmt(st.d.e, 2)} мм${st.d.e < st.d.e0 - 1e-6 ? ` (уменьшен с ${fmt(st.d.e0, 2)}, чтобы было не круче 45°)` : ''}`);
+  const sm = document.createElement('small'); sm.style.color = 'var(--muted)';
+  sm.textContent = want > 45 ? 'Круче 45° без поддержек не напечатать — взят 45°.' : 'До 45° печатается без поддержек. Угол можно вписать сам — вылет подберётся.';
+  box.appendChild(sm);
+}
 function drawSample(){
   const box = $('sample'); if (!box) return;
   const side = 50 * S, sq = [[{X: 0, Y: 0}, {X: side, Y: 0}, {X: side, Y: side}, {X: 0, Y: side}]];
@@ -13521,7 +13811,7 @@ const VIS = {
   grooveOn: () => P.wallType !== 'custom' && P.faceMode !== 'integral' && P.faceMode !== 'acrylic', grooveOff: () => P.wallType !== 'custom' && P.faceMode === 'integral',
   rel: () => P.relType !== 'none', deco: () => P.decoType !== 'none', decoN: () => P.decoType !== 'none' && !decoOne(P.decoType), stripe: () => P.stripeOn, stripes: () => P.stripeOn && Math.round(P.stripeN || 1) > 1, face: () => P.faceMode !== 'none' && P.faceMode !== 'acrylic', acr: () => P.faceMode === 'acrylic', notAcr: () => P.faceMode !== 'acrylic', pvc: () => P.backMode === 'pvc', cnc: () => P.faceMode === 'acrylic' || P.backMode === 'pvc', backPrint: () => P.backMode !== 'none' && P.backMode !== 'pvc', faceSep: () => P.faceMode === 'separate',
   back: () => P.backMode !== 'none', tray: () => P.backMode === 'tray', snap: () => P.backMode === 'tray' && P.snapOn,
-  pat: () => P.pattern !== 'solid', voronoi: () => P.pattern === 'voronoi', inlay: () => P.pattern !== 'solid' && P.patMode === 'inlay'
+  pat: () => P.pattern !== 'solid', voronoi: () => P.pattern === 'voronoi' || P.pattern === 'bubbles', inlay: () => P.pattern !== 'solid' && P.patMode === 'inlay'
 };
 function showMsgs(id, msgs){
   const box = $(id); if (!box) return;
@@ -13569,9 +13859,9 @@ function summaries(){
     set('sAcr', parts_.length ? `${parts_.join(' + ')} · фреза ⌀${fmt(P.acrD, 3)}` : 'Выключено — всё печатается'); }
   set('sTop', `${faceTxt} · борт ${P.wallType === 'custom' && profile ? fmt(profile.H) + ' мм, свой профиль' : fmt(P.A) + ' × ' + fmt(P.B) + ' мм'}`);
   set('sBack', {tray: `Задник ${fmt(P.tBack)} мм, бортик ${fmt(P.lipH)} мм${P.snapOn ? ', защёлки' : ''}`, integral: `Заодно с бортом, ${fmt(P.tBack)} мм`, none: 'Без задника', pvc: `Лист ПВХ ${fmt(P.tBack)} мм — на ЧПУ`}[P.backMode]);
-  set('sPat', P.pattern === 'solid' ? 'Без узора' : `${({hex: 'Соты', scales: 'Чешуя', petals: 'Лепестки', voronoi: 'Вороной'})[P.pattern]} ${fmt(P.patSize)} мм на ${P.patOn === 'face' ? 'лице' : 'заднике'}, ${P.patMode === 'inlay' ? 'вторым пластиком' : 'насквозь'}`);
+  set('sPat', P.pattern === 'solid' ? 'Без узора' : `${PATS[P.pattern] || P.pattern} ${fmt(P.patSize)} мм на ${P.patOn === 'face' ? 'лице' : 'заднике'}, ${P.patMode === 'inlay' ? 'вторым пластиком' : 'насквозь'}`);
   { const a = P.decoType !== 'none' ? `${DECO[P.decoType]}${decoOne(P.decoType) ? '' : ' × ' + Math.max(1, Math.round(P.decoN))}, вылет ${fmt(P.decoE)} мм` : '';
-    const b = P.relType === 'none' ? '' : `рельеф: ${{studs: 'пупырышки', cones: 'шипы', pyramids: 'пирамидки', dimples: 'ямки'}[P.relType]}, ${fmt(P.relH)} мм, шаг ${fmt(P.relPitch)}`;
+    const b = P.relType === 'none' ? '' : `рельеф: ${{studs: 'пупырышки', cones: 'шипы', pyramids: 'пирамидки', dimples: 'ямки', hexes: 'соты', scales: 'чешуя', bricks: 'кирпич', knurl: 'накатка', vribs: 'рёбра', flutes: 'каннелюры', hribs: 'кольца', twist: 'витые', waves: 'волны', stone: 'камень'}[P.relType]}, ${fmt(P.relH)} мм, шаг ${fmt(P.relPitch)}`;
     set('sRel', a && b ? a + ' · ' + b : a || (b ? b[0].toUpperCase() + b.slice(1) : 'Ровный, без рельефа')); }
   set('sStripe', P.stripeOn ? `${Math.max(1, Math.min(4, Math.round(P.stripeN || 1))) > 1 ? Math.max(1, Math.min(4, Math.round(P.stripeN))) + ' × ' : ''}${fmt(P.stripeH)} мм, пластик ${P.matStripe}` : 'Выключены');
   set('sPrint', `Стол ${fmt(P.bed, 0)} мм · слой ${fmt(P.layerH)} мм`);
@@ -13589,7 +13879,8 @@ function refreshUI(){
   document.querySelectorAll('[data-pat]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.pat === P.pattern)));
   document.querySelectorAll('[data-deco]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.deco === P.decoType)));
   { const nt = $('snapNote'); if (nt) nt.textContent = `Выступ на юбке выходит за зазор на «натяг» и при надевании борта сверху заскакивает в гнездо на внутренней стороне борта. Гнездо глухое — снаружи борт целый. Снизу у выступа скос 45°, сверху пологий заход: борт надевается легко, а снимается с усилием. Натяг 0,3–0,5 мм для PLA и PETG. Защёлки ставятся на ровных участках, примерно через каждые ${fmt(P.snapStep, 0)} мм контура, минимум две на букву.${result && result.snaps ? ` Сейчас защёлок: ${result.snaps}.` : ''}`; }
-  { const lb = $('decoNLbl'); if (lb) lb.textContent = {pillows: 'Сколько подушек', wave: 'Сколько волн', zigzag: 'Сколько зубцов', ribs: 'Сколько рёбер', shingle: 'Сколько рядов'}[P.decoType] || 'Сколько, шт';
+  { const lb = $('decoNLbl'); if (lb) lb.textContent = {pillows: 'Сколько подушек', wave: 'Сколько волн', zigzag: 'Сколько зубцов', ribs: 'Сколько рёбер', shingle: 'Сколько рядов', saw: 'Сколько зубцов', steps: 'Сколько ступеней', beads: 'Сколько валиков'}[P.decoType] || 'Сколько, шт';
+    drawDecoAng();
     const nt = $('decoNote'); if (nt) nt.textContent = P.decoType === 'none' ? '' : 'Борт — пустая оболочка одной толщины B: внутренняя сторона повторяет наружную, слайсер печатает его одними стенками, без заполнения. Скаты не круче 45° — если вылет слишком большой, он уменьшится сам. Снизу на высоту юбки задника и сверху у паза борт остаётся ровным. Буква по борту станет шире на два вылета.'
       + (P.decoType === 'zigzag' && Math.round(P.decoN) === 2 ? ' Два зубца — линия «М» сбоку.' : '')
       + (P.decoType === 'slope' ? ' Наклон: борт ровной стенкой расширяется от задника к лицу на величину вылета, лицо и паз становятся больше на столько же. Вылет не больше высоты наклонной части (угол ≤ 45°).' : ''); }
@@ -13633,6 +13924,7 @@ function rebuildSource(){
 function onParam(k){
   save();
   if (/^fil[A-Z]/.test(k)){ fillStats(); drawCost(); return; }
+  if (k === 'decoAng'){ const e = eForAngle(+P.decoAng); if (e != null && e >= 0.3){ P.decoE = e; const de = $('decoE'); if (de) de.value = fmt(e, 2); } k = 'decoE'; }
   if (/^c\d$/.test(k)){ for (const i in matCache) if (/^\d+$/.test(i)) matFor(+i); if (V) V.dirty = true; refreshUI(); return; }
   if (k === 'text' || k === 'font' || k === 'txtH' || k === 'txtGap'){ summaries(); clearTimeout(srcTimer); srcTimer = setTimeout(rebuildSource, 300); return; }
   if (k === 'src' || k === 'flipX'){ refreshUI(); rebuildSource(); return; }
@@ -13796,8 +14088,17 @@ function drawCncView(kind, boxId, noteId, col){
   if (note && !isAcr){ note.textContent = `${n} ${plural(n, ['деталь', 'детали', 'деталей'])} из ПВХ ${fmt(P.tBack)} мм, габарит ${fmt(w, 0)} × ${fmt(h, 0)} мм. Внутренние углы скруглены под фрезу ⌀${fmt(P.acrD, 3)}.`; return; }
   if (note) note.textContent = `${n} ${plural(n, ['деталь', 'детали', 'деталей'])} из акрила ${fmt(P.acrT)} мм, габарит ${fmt(w, 0)} × ${fmt(h, 0)} мм. Внутренние углы скруглены под фрезу ⌀${fmt(P.acrD, 3)} (радиус не меньше ${fmt(P.acrD / 2)} мм), паз в борту — так же.`;
 }
+let resultStale = false;
 function applyResult(R){
   const old = result;
+  // ошибка в настройках: прошлая модель остаётся на столе, цифру в поле не трогаем, внизу — что не так
+  if (!R.letters && old && parts.length && selected.size){
+    resultStale = true;
+    showMsgs('msgs', srcMsgs.concat(R.msgs, [{t: 'warn', m: 'На столе — последняя правильная модель. Исправьте значение — модель пересчитается сама. Скачивание вернётся, когда ошибок не будет.'}]));
+    fillStats(); hideProgress(); setBusy(false);
+    return;
+  }
+  resultStale = false;
   result = R.letters ? R : null;
   renderResult(needFit); if (result) needFit = false;
   drawDiagram();
@@ -13807,7 +14108,7 @@ function applyResult(R){
 }
 function fillStats(){
   const st = $('stats'); st.innerHTML = '';
-  ['btn3mf', 'btnStl', 'btnAll', 'btnDxf', 'btnDxf2'].forEach(id => $(id).disabled = !result);
+  ['btn3mf', 'btnStl', 'btnAll', 'btnDxf', 'btnDxf2'].forEach(id => $(id).disabled = !result || resultStale);
   $('btnDxf2').hidden = !(result && cncFiles(result).length);
   if (!result) return;
   const R = result;
@@ -13951,14 +14252,19 @@ function addSpinners(){
       el.dispatchEvent(new Event('input', {bubbles: true}));
     };
     const hold = (b, dir) => {
-      let t1, t2;
-      const stop = () => { clearTimeout(t1); clearInterval(t2); };
-      b.addEventListener('pointerdown', e => { e.preventDefault(); bump(dir, e.shiftKey); t1 = setTimeout(() => { t2 = setInterval(() => bump(dir, e.shiftKey), 90); }, 450); });
-      ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, stop));
+      let t1, t2, held = false;
+      const stop = () => { held = false; clearTimeout(t1); clearInterval(t2); };
+      b.addEventListener('pointerdown', e => {
+        e.preventDefault(); stop(); held = true;
+        try { b.setPointerCapture(e.pointerId); } catch (_){}
+        bump(dir, e.shiftKey);
+        t1 = setTimeout(() => { if (held) t2 = setInterval(() => { if (held) bump(dir, e.shiftKey); else stop(); }, 90); }, 500);
+      });
+      ['pointerup', 'pointerleave', 'pointercancel', 'lostpointercapture'].forEach(ev => b.addEventListener(ev, stop));
+      window.addEventListener('blur', stop);
     };
     hold(up, 1); hold(dn, -1);
     el.addEventListener('keydown', e => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown'){ e.preventDefault(); bump(e.key === 'ArrowUp' ? 1 : -1, e.shiftKey); } });
-    el.addEventListener('wheel', e => { if (document.activeElement !== el) return; e.preventDefault(); bump(e.deltaY < 0 ? 1 : -1, e.shiftKey); }, {passive: false});
   });
 }
 function bindUI(){
@@ -13979,6 +14285,7 @@ function bindUI(){
     if (P.src === 'file' && !fileItems) $('fileSrc').click();
     onParam('src');
   }));
+  buildPatTiles();
   document.querySelectorAll('[data-pat]').forEach(b => b.addEventListener('click', () => { P.pattern = b.dataset.pat; onParam('pattern'); }));
   { const box = $('decoTiles');
     if (box) for (const key in DECO){
