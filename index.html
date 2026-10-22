@@ -291,6 +291,8 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
           
           <div class="sub" data-vis="pvc">Задник из ПВХ</div>
           <p class="hint" data-vis="pvc">Толщина листа — поле «Толщина пластины» в блоке «Основа: задник». Лист режется по наружному контуру букв, отверстия букв (внутри «О», «А») вырезаются.</p>
+          <label class="f" data-vis="pvc"><span>Зазор задника от края букв, мм</span><input class="in" id="pvcGap" data-k="pvcGap" inputmode="decimal"></label>
+          <p class="hint" data-vis="pvc">Лист режется меньше наружного контура букв на этот зазор с каждой стороны — край ПВХ прячется под бортом и не торчит. 0 — точно по контуру.</p>
           <div class="acrview" id="pvcView" data-vis="pvc"></div>
           <p class="hint" id="pvcNote" data-vis="pvc"></p>
           <button type="button" class="btn primary" id="btnDxf" data-vis="cnc">Скачать DXF для ЧПУ</button>
@@ -11767,7 +11769,7 @@ const DEF = {
   scaleW: 394, corner: 'miter', bed: 256,
   wallType: 'standard', A: 40, B: 1.5, C: 3, G: 0.75, E: 2, alpha: 45, matWall: 1,
   stripeOn: false, stripeH: 10, stripeFrom: '', layerH: 0.2, matStripe: 4,
-  faceMode: 'integral', faceJoin: 'groove', acrT: 3, acrC: 3, acrG: 0.8, acrGap: 0.2, acrD: 3.175, acrShelf: 2, lapW: 0.8, lapH: 4, tFace: 1.2, gapFace: 0.15, matFace: 2,
+  faceMode: 'integral', faceJoin: 'groove', acrT: 3, acrC: 3, acrG: 0.8, acrGap: 0.2, acrD: 3.175, acrShelf: 2, pvcGap: 0.3, lapW: 0.8, lapH: 4, tFace: 1.2, gapFace: 0.15, matFace: 2,
   backMode: 'tray', trayStyle: 'skirt', tBack: 2, lipH: 10, lipW: 1.5, fillet: 2, gapTray: 0.2, matBack: 1,
   snapOn: false, snapH: 0.4, snapLen: 8, snapStep: 100,
   filType: 'pla', filPrice: 1500, filExtra: 10,
@@ -12946,7 +12948,7 @@ function* buildGen(p){
     }
     if (bm === 'pvc'){
       // задник из листа ПВХ по наружному контуру букв; внутренние углы — по радиусу фрезы
-      const ex = toEx(closing(A, p.acrD / 2));
+      const gp = Math.max(-5, Math.min(p.pvcGap || 0, p.B * 0.9)), ex = toEx(gp ? offset(closing(A, p.acrD / 2), -gp, 'round') : closing(A, p.acrD / 2));
       if (ex.length) pieces.push({kind: 'pvc', flip: false, noPrint: true, z0: -p.tBack, z1: 0, outline: ex.flatMap(e => [e.outer].concat(e.holes)),
         layers: [{ex, a: -p.tBack, b: 0, role: 'pvc', mat: 'pvc'}]});
     }
@@ -13222,6 +13224,10 @@ function initViewer(){
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(35, 1, 1, 50000); camera.up.set(0, 0, 1);
   const controls = new THREE.OrbitControls(camera, renderer.domElement); controls.enableDamping = true;
+  // левая — вращать, зажатое колесо и правая — двигать модель, прокрутка колеса — приближать
+  controls.mouseButtons = {LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.PAN};
+  controls.screenSpacePanning = true;
+  if (renderer.domElement.addEventListener) renderer.domElement.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); });
   scene.add(new THREE.HemisphereLight(0xffffff, 0x555560, 0.8));
   const sun = new THREE.DirectionalLight(0xffffff, 0.7); sun.position.set(-1, -2, 3); scene.add(sun);
   const group = new THREE.Group(), deco = new THREE.Group(); scene.add(group); scene.add(deco);
@@ -13266,7 +13272,7 @@ function renderResult(fit){
     if (viewMode === 'print'){ ensurePrinted(pc, R); for (const l of pc.layers) v.group.add(new THREE.Mesh(l.pg, matFor(l.mat))); }
     else {
       const base = R.back === 'pvc' ? p.tBack : 0;
-      const lift = base + (pc.kind === 'pvc' ? (explode ? -gapE * 0.7 : 0) : pc.kind === 'tray' ? 0 : pc.kind === 'body' ? trayLift : trayLift + (explode ? gapE : 0));
+      const lift = base + (pc.kind === 'pvc' ? 0 : R.back === 'pvc' && explode ? gapE * 0.7 : 0) + (pc.kind === 'pvc' ? 0 : pc.kind === 'tray' ? 0 : pc.kind === 'body' ? trayLift : trayLift + (explode ? gapE : 0));
       for (const l of pc.layers){ const m = new THREE.Mesh(l.g, matFor(l.mat)); m.position.z = lift; v.group.add(m); }
     }
   }
@@ -13969,7 +13975,7 @@ function bindUI(){
     } }
   bindDrop('dropFile', 'fileSrc', loadFile);
   bindDrop('dropFont', 'fileFont', loadFont, true);
-  const setExp = x => { explode = x; $('vAsm').setAttribute('aria-pressed', String(!x)); $('vExplode').setAttribute('aria-pressed', String(x)); renderResult(true); };
+  const setExp = x => { explode = x; $('vAsm').setAttribute('aria-pressed', String(!x)); $('vExplode').setAttribute('aria-pressed', String(x)); renderResult(false); };
   $('vAsm').addEventListener('click', () => setExp(false));
   $('vExplode').addEventListener('click', () => setExp(true));
   $('btn3mf').addEventListener('click', () => download('3mf'));
