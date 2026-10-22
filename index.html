@@ -85,7 +85,7 @@ header p{margin:0;color:var(--muted);max-width:80ch}
 .f:has(>.in)>.in:focus,.f:has(.sp>.in:focus) .in:focus{box-shadow:none}
 .f:has(>.in):hover,.f:has(>.sp):hover{border-color:var(--well-hover)}
 .lt{display:inline-grid;place-items:center;width:19px;height:19px;border-radius:5px;font:700 11px var(--f-body);color:#fff;flex:none}
-.lt.A{background:var(--dimA)} .lt.B{background:var(--dimB)} .lt.C{background:var(--dimC)} .lt.D{background:var(--dimD)} .lt.E{background:var(--dimE)}
+.lt.A{background:var(--dimA)} .lt.B{background:var(--dimB)} .lt.C{background:var(--dimC)} .lt.D{background:var(--dimD)} .lt.E{background:var(--dimE)} .lt.T{background:var(--accent);color:#1a0806}
 .in{width:100%;border:1px solid var(--well-line);background:var(--well);color:#fff;border-radius:9px;padding:9px 11px;font:600 16px var(--f-body);font-variant-numeric:tabular-nums;min-width:0;box-shadow:inset 0 1px 3px rgba(0,0,0,.5);transition:border-color .12s,box-shadow .12s}
 .in:hover{border-color:var(--well-hover)}
 textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
@@ -261,6 +261,12 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
             <label class="f"><span><i class="lt A">A</i> Высота</span><input class="in" id="A" data-k="A" inputmode="decimal"></label>
             <label class="f"><span><i class="lt B">B</i> Стенка</span><input class="in" id="B" data-k="B" inputmode="decimal"></label>
             <label class="f" data-vis="face"><span><i class="lt D">D</i> Лицо</span><input class="in" id="tFace" data-k="tFace" inputmode="decimal"></label>
+          </div>
+          <div class="sub" data-vis="back">Задник</div>
+          <div class="g3 backrow" data-vis="back">
+            <label class="f"><span><i class="lt T">T</i> Пластина</span><input class="in" id="tBack2" data-k="tBack" inputmode="decimal"></label>
+            <label class="f" data-vis="tray"><span><i class="lt T">h</i> Бортик</span><input class="in" id="lipH2" data-k="lipH" inputmode="decimal"></label>
+            <label class="f" data-vis="tray"><span><i class="lt T">w</i> Толщина</span><input class="in" id="lipW2" data-k="lipW" inputmode="decimal"></label>
           </div>
           <div class="diagram" id="diagram"></div>
           <div class="mat"><span class="ml">Пластик борта</span><div class="chips" data-chips="matWall"></div></div>
@@ -13351,8 +13357,8 @@ function drawDiagram(){
     if (lipOn){
       const r1 = riW + P.gapTray;
       s += rect(r1, P.tBack, r1 + P.lipW, P.tBack + P.lipH, cb);
-      calls.push({tx: X(r1 + P.lipW), ty: Y(P.tBack + P.lipH * 0.5), t: `${skirtSt ? 'Юбка' : 'Бортик'} h · ${fmt(P.lipH)} мм`, col: cT});
-      calls.push({tx: X(r1 + P.lipW / 2), ty: Y(P.tBack + P.lipH * 0.85), t: `${skirtSt ? 'Юбка' : 'Бортик'} w · ${fmt(P.lipW)} мм`, col: cT});
+      calls.push({tx: X(r1 + P.lipW), ty: Y(P.tBack + P.lipH * 0.5), t: `Бортик h · ${fmt(P.lipH)} мм`, col: cT});
+      calls.push({tx: X(r1 + P.lipW / 2), ty: Y(P.tBack + P.lipH * 0.85), t: `Бортик w · ${fmt(P.lipW)} мм`, col: cT});
     }
     s += lead(rIn - 4, Y(0) + 13, X(skirtSt ? maxR : ri + (lipOn ? P.lipW : 0)) + 14, Y(P.tBack / 2), cT) + T(rIn, Y(0) + 17, `Задник T · ${fmt(P.tBack)} мм`, cT);
     if (lipOn) calls.push({tx: X(riW + P.gapTray / 2), ty: Y(P.tBack + P.lipH * 0.25 + zoff * 0), t: `Зазор g · ${fmt(P.gapTray)} мм`, col: cG});
@@ -13947,6 +13953,8 @@ function bindUI(){
       else if (k === 'stripeFrom' || k === 'text') P[k] = String(el.value);
       else if (typeof DEF[k] === 'number'){ const v = parseFloat(String(el.value).replace(',', '.')); if (!isFinite(v)) return; P[k] = v; }
       else P[k] = el.value;
+      // то же поле может стоять в двух местах (над схемой и в блоке задника) — подтягиваем второе
+      document.querySelectorAll(`[data-k="${k}"]`).forEach(o => { if (o !== el && o.type !== 'checkbox' && o.tagName !== 'SELECT') o.value = el.value; else if (o !== el) o[o.type === 'checkbox' ? 'checked' : 'value'] = el.type === 'checkbox' ? el.checked : el.value; });
       onParam(k);
     };
     el.addEventListener(el.tagName === 'SELECT' || el.type === 'checkbox' ? 'change' : 'input', apply);
