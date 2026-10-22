@@ -79,7 +79,7 @@ header p{margin:0;color:var(--muted);max-width:80ch}
 .f{display:flex;flex-direction:column;gap:6px;font-size:15px;min-width:0}
 .f>span{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:500;color:var(--lbl);letter-spacing:.01em}
 .f:has(>.in),.f:has(>.sp){gap:0;border:1px solid var(--well-line);border-radius:10px;overflow:hidden;background:var(--well)}
-.f:has(>.in)>span:not(.sp),.f:has(>.sp)>span:not(.sp){background:var(--lblbg);padding:6px 10px;border-bottom:1px solid #5d4b2c;flex:1;align-items:flex-start}
+.f:has(>.in)>span,.f:has(>.sp)>span{background:var(--lblbg);padding:6px 10px;border-bottom:1px solid #5d4b2c}
 .f:has(>.in)>.in,.f:has(>.sp)>.in,.f:has(>.sp)>.sp>.in,.f>.sp>.in{border:0;border-radius:0;box-shadow:none;background:var(--well)}
 .f:has(>.in:focus),.f:has(.sp>.in:focus){border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,90,79,.18)}
 .f:has(>.in)>.in:focus,.f:has(.sp>.in:focus) .in:focus{box-shadow:none}
@@ -90,7 +90,6 @@ header p{margin:0;color:var(--muted);max-width:80ch}
 .in:hover{border-color:var(--well-hover)}
 textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
 .sp{position:relative;display:block}
-.f>.sp{flex:none}
 .sp>.in{padding-right:34px}
 .sp .sb{position:absolute;right:3px;top:3px;bottom:3px;width:28px;display:flex;flex-direction:column;gap:2px}
 .sp .sb button{flex:1;border:0;border-radius:6px;background:#26384b;color:var(--fg);cursor:pointer;font:700 11px/1 var(--f-body);padding:0;user-select:none}
@@ -263,11 +262,6 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
             <label class="f"><span><i class="lt B">B</i> Стенка</span><input class="in" id="B" data-k="B" inputmode="decimal"></label>
             <label class="f" data-vis="face"><span><i class="lt D">D</i> Лицо</span><input class="in" id="tFace" data-k="tFace" inputmode="decimal"></label>
           </div>
-          <div class="g3" data-vis="back">
-            <label class="f"><span>Толщина задника, мм</span><input class="in" id="tBack2" data-k="tBack" inputmode="decimal"></label>
-            <label class="f" data-vis="tray"><span>Высота бортика задника, мм</span><input class="in" id="lipH2" data-k="lipH" inputmode="decimal"></label>
-            <label class="f" data-vis="tray"><span>Толщина бортика задника, мм</span><input class="in" id="lipW2" data-k="lipW" inputmode="decimal"></label>
-          </div>
           <div class="diagram" id="diagram"></div>
           <div class="mat"><span class="ml">Пластик борта</span><div class="chips" data-chips="matWall"></div></div>
           <div class="mat" data-vis="face"><span class="ml">Пластик лица</span><div class="chips" data-chips="matFace"></div></div>
@@ -316,6 +310,7 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
             <label class="f" data-vis="tray"><span>Галтель бортика, мм</span><input class="in" id="fillet" data-k="fillet" inputmode="decimal"></label>
             <label class="f" data-vis="tray"><span>Зазор юбки и борта, мм</span><input class="in" id="gapTray" data-k="gapTray" inputmode="decimal"></label>
           </div>
+          <div class="diagram" id="diagram2" data-vis="back"></div>
           <label class="check" data-vis="tray"><input type="checkbox" id="snapOn" data-k="snapOn"> Защёлки: выступы на юбке задника, гнёзда в борту буквы — не насквозь</label>
           <div class="g3" data-vis="snap">
             <label class="f"><span>Натяг, мм</span><input class="in" id="snapH" data-k="snapH" inputmode="decimal"></label>
@@ -13294,7 +13289,7 @@ function renderResult(fit){
 function drawDiagram(){
   const box = $('diagram'); if (!box) return;
   const msgs = [], prof = profileOf(P, msgs), Wv = 340, Hv = 492;
-  if (!prof){ box.innerHTML = `<svg viewBox="0 0 ${Wv} ${Hv}" role="img" aria-label="Схема борта"><text x="170" y="180" text-anchor="middle" class="dm">${P.wallType === 'custom' ? 'Загрузите файл профиля' : 'Проверьте размеры борта'}</text></svg>`; return; }
+  if (!prof){ box.innerHTML = `<svg viewBox="0 0 ${Wv} ${Hv}" role="img" aria-label="Схема борта"><text x="170" y="180" text-anchor="middle" class="dm">${P.wallType === 'custom' ? 'Загрузите файл профиля' : 'Проверьте размеры борта'}</text></svg>`; if ($('diagram2')) $('diagram2').innerHTML = box.innerHTML; return; }
   const H = prof.H, maxR = Math.max(...prof.pts.map(q => q.r));
   const fm = P.faceMode, bm = P.backMode, tray = bm === 'tray';
   const deco = decoProfile(P, prof, bm === 'integral' ? P.tBack : 0, fm === 'integral' ? H - P.tFace : H, fm === 'integral', []);
@@ -13423,6 +13418,8 @@ function drawDiagram(){
   s += `<text x="${X(minR) - 4}" y="${Y(Htot) - 26}" text-anchor="end" class="dm">Снаружи</text><text x="${X(0) + 4}" y="${Y(Htot) - 26}" class="dm">Внутри →</text>`;
   if (kx > k * 1.4) s += `<text x="${Wv - 6}" y="${Hv - 8}" text-anchor="end" class="dm" style="font-size:9.5px">по горизонтали масштаб увеличен</text>`;
   box.innerHTML = `<svg viewBox="0 0 ${Wv} ${Hv}" role="img" aria-label="Схема борта, задника и лица в разрезе">${s}</svg>`;
+  // та же схема в блоке задника — чтобы видеть изменения, не листая наверх (id внутри svg делаем своими)
+  const b2 = $('diagram2'); if (b2) b2.innerHTML = box.innerHTML.replace(/id="([^"]+)"/g, 'id="$1_2"').replace(/url\(#([^)]+)\)/g, 'url(#$1_2)');
 }
 // значок формы борта: разрез стенки, снаружи — слева
 function decoIcon(t){
@@ -13953,8 +13950,6 @@ function bindUI(){
       else if (k === 'stripeFrom' || k === 'text') P[k] = String(el.value);
       else if (typeof DEF[k] === 'number'){ const v = parseFloat(String(el.value).replace(',', '.')); if (!isFinite(v)) return; P[k] = v; }
       else P[k] = el.value;
-      // одно и то же поле стоит в двух местах (над схемой и в блоке задника) — подтягиваем второе
-      document.querySelectorAll(`[data-k="${k}"]`).forEach(o => { if (o !== el) o.value = el.value; });
       onParam(k);
     };
     el.addEventListener(el.tagName === 'SELECT' || el.type === 'checkbox' ? 'change' : 'input', apply);
