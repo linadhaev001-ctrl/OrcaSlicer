@@ -15,7 +15,7 @@
   --accent:#ff5a4f; --accent-soft:#3a1d1a; --accent-line:#7a3029; --accent-fill:#6e2a24; --accent-ink:#1a0806;
   --ok:#5fd29a; --warn:#f0a35c; --err:#ff7b80;
   --dimA:#5cc98d; --dimB:#78a9f0; --dimC:#f0b24a; --dimD:#f07ab0; --dimE:#4fc6c9;
-  --cellbg:#2a2f36; --view:#0f1012; color-scheme:dark;
+  --cellbg:#2a2f36; --view:#0f1012; --well:#16212d; --well-line:#2f4257; --well-hover:#42607f; --lbl:#f3e4c2; --lblbg:#4a3c24; color-scheme:dark;
   --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
 }
@@ -76,20 +76,27 @@ header p{margin:0;color:var(--muted);max-width:80ch}
 .seg button{all:unset;box-sizing:border-box;text-align:center;padding:8px 6px;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--panel);color:var(--accent);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .seg button:focus-visible{outline:2px solid var(--accent)}
-.f{display:flex;flex-direction:column;gap:5px;font-size:15px;min-width:0}
-.f>span{display:flex;align-items:center;gap:6px}
+.f{display:flex;flex-direction:column;gap:6px;font-size:15px;min-width:0}
+.f>span{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:500;color:var(--lbl);letter-spacing:.01em}
+.f:has(>.in),.f:has(>.sp){gap:0;border:1px solid var(--well-line);border-radius:10px;overflow:hidden;background:var(--well)}
+.f:has(>.in)>span,.f:has(>.sp)>span{background:var(--lblbg);padding:6px 10px;border-bottom:1px solid #5d4b2c}
+.f:has(>.in)>.in,.f:has(>.sp)>.in,.f:has(>.sp)>.sp>.in,.f>.sp>.in{border:0;border-radius:0;box-shadow:none;background:var(--well)}
+.f:has(>.in:focus),.f:has(.sp>.in:focus){border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,90,79,.18)}
+.f:has(>.in)>.in:focus,.f:has(.sp>.in:focus) .in:focus{box-shadow:none}
+.f:has(>.in):hover,.f:has(>.sp):hover{border-color:var(--well-hover)}
 .lt{display:inline-grid;place-items:center;width:19px;height:19px;border-radius:5px;font:700 11px var(--f-body);color:#fff;flex:none}
 .lt.A{background:var(--dimA)} .lt.B{background:var(--dimB)} .lt.C{background:var(--dimC)} .lt.D{background:var(--dimD)} .lt.E{background:var(--dimE)}
-.in{width:100%;border:1.5px solid var(--line2);background:var(--panel);color:var(--fg);border-radius:9px;padding:9px 11px;font:16px var(--f-body);font-variant-numeric:tabular-nums;min-width:0}
+.in{width:100%;border:1px solid var(--well-line);background:var(--well);color:#fff;border-radius:9px;padding:9px 11px;font:600 16px var(--f-body);font-variant-numeric:tabular-nums;min-width:0;box-shadow:inset 0 1px 3px rgba(0,0,0,.5);transition:border-color .12s,box-shadow .12s}
+.in:hover{border-color:var(--well-hover)}
 textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
 .sp{position:relative;display:block}
 .sp>.in{padding-right:34px}
 .sp .sb{position:absolute;right:3px;top:3px;bottom:3px;width:28px;display:flex;flex-direction:column;gap:2px}
-.sp .sb button{flex:1;border:0;border-radius:6px;background:var(--soft);color:var(--fg);cursor:pointer;font:700 11px/1 var(--f-body);padding:0;user-select:none}
+.sp .sb button{flex:1;border:0;border-radius:6px;background:#26384b;color:var(--fg);cursor:pointer;font:700 11px/1 var(--f-body);padding:0;user-select:none}
 .sp .sb button:hover{background:var(--accent);color:#000}
 .sp .sb button:active{filter:brightness(.85)}
-.in:focus{outline:none;border-color:var(--accent)}
-.in:disabled{background:var(--soft);color:var(--muted)}
+.in:focus{outline:none;border-color:var(--accent);box-shadow:inset 0 1px 3px rgba(0,0,0,.5),0 0 0 3px rgba(255,90,79,.18)}
+.in:disabled{background:var(--soft);color:var(--muted);box-shadow:none}
 .g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .g2>.wide{grid-column:1/-1}
 .presets{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
@@ -175,7 +182,7 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
 <div class="wrap">
   <header>
     <h1>Генератор вывесок</h1>
-    <p>Напишите текст или загрузите контур DXF / SVG — на столе сразу появятся корпус с лицом и поддон. Настройки разложены по деталям вывески.</p>
+    <p>Напишите текст или загрузите контур DXF / SVG — на столе сразу появятся корпус с лицом и задник. Настройки разложены по деталям вывески.</p>
   </header>
 
   <div class="app">
@@ -294,16 +301,16 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
         <summary><span class="dot" id="dotBack"></span><span class="bt"><b>Основа: задник</b><small id="sBack"></small></span><span class="chev"></span></summary>
         <div class="bb">
           <label class="f"><span>Задник</span>
-            <select class="in" id="backMode" data-k="backMode"><option value="pvc">Лист ПВХ под борт — режется на ЧПУ, отдаётся DXF</option><option value="tray">Поддон с бортиком — вставляется в крышку</option><option value="integral">Заодно с бортом</option><option value="none">Без задника</option></select></label>
+            <select class="in" id="backMode" data-k="backMode"><option value="pvc">Лист ПВХ под борт — режется на ЧПУ, отдаётся DXF</option><option value="tray">Задник с бортиком — вставляется в крышку</option><option value="integral">Заодно с бортом</option><option value="none">Без задника</option></select></label>
           <div class="g2" data-vis="back">
             <label class="f"><span>Толщина пластины, мм</span><input class="in" id="tBack" data-k="tBack" inputmode="decimal"></label>
-            <label class="f wide" data-vis="tray"><span>Посадка борта буквы</span><select class="in" id="trayStyle" data-k="trayStyle"><option value="skirt">Борт ложится на поддон, юбка заходит в борт</option><option value="inner">Поддон вставляется внутрь борта</option></select></label>
+            <label class="f wide" data-vis="tray"><span>Посадка борта буквы</span><select class="in" id="trayStyle" data-k="trayStyle"><option value="skirt">Борт ложится на задник, юбка заходит в борт</option><option value="inner">Задник вставляется внутрь борта</option></select></label>
             <label class="f" data-vis="tray"><span>Высота бортика, мм</span><input class="in" id="lipH" data-k="lipH" inputmode="decimal"></label>
             <label class="f" data-vis="tray"><span>Толщина бортика, мм</span><input class="in" id="lipW" data-k="lipW" inputmode="decimal"></label>
             <label class="f" data-vis="tray"><span>Галтель бортика, мм</span><input class="in" id="fillet" data-k="fillet" inputmode="decimal"></label>
             <label class="f" data-vis="tray"><span>Зазор юбки и борта, мм</span><input class="in" id="gapTray" data-k="gapTray" inputmode="decimal"></label>
           </div>
-          <label class="check" data-vis="tray"><input type="checkbox" id="snapOn" data-k="snapOn"> Защёлки: выступы на юбке поддона, гнёзда в борту буквы — не насквозь</label>
+          <label class="check" data-vis="tray"><input type="checkbox" id="snapOn" data-k="snapOn"> Защёлки: выступы на юбке задника, гнёзда в борту буквы — не насквозь</label>
           <div class="g3" data-vis="snap">
             <label class="f"><span>Натяг, мм</span><input class="in" id="snapH" data-k="snapH" inputmode="decimal"></label>
             <label class="f"><span>Длина, мм</span><input class="in" id="snapLen" data-k="snapLen" inputmode="decimal" data-step="1"></label>
@@ -11738,7 +11745,7 @@ const $ = id => document.getElementById(id);
 const CL = ClipperLib, CT = CL.ClipType, PFT = CL.PolyFillType;
 const fmt = (n, d) => String(+(+n).toFixed(d == null ? 2 : d)).replace('.', ',');
 const plural = (n, f) => { const a = Math.abs(n) % 100, b = a % 10; return f[a > 10 && a < 20 ? 2 : b === 1 ? 0 : b >= 2 && b <= 4 ? 1 : 2]; };
-const KIND_RU = {body: 'корпус', face: 'лицо', tray: 'поддон'};
+const KIND_RU = {body: 'корпус', face: 'лицо', tray: 'задник'};
 const KIND_LAT = {body: 'korpus', face: 'lico', tray: 'poddon'};
 const CDR_MSG = 'CDR — закрытый формат CorelDRAW, браузер его не прочитает. В CorelDRAW: Файл → Экспорт → DXF или SVG, и загрузите этот файл.';
 /*CORE-A-END*/
@@ -12118,7 +12125,8 @@ function profileOf(p, msgs){
   return {pts, H: A, W: B + p.E, kind: 'ledge'};
 }
 // ===== фигурный борт: наружная сторона выгибается наружу (бочка, волна, зигзаг…), внутренняя остаётся ровной =====
-const DECO = {none: 'Ровный', barrel: 'Бочка', pillows: 'Подушки', wave: 'Волна', zigzag: 'Зигзаг «М»', ribs: 'Рёбра', shingle: 'Черепица'};
+const DECO = {none: 'Ровный', barrel: 'Бочка', pillows: 'Подушки', wave: 'Волна', zigzag: 'Зигзаг «М»', ribs: 'Рёбра', shingle: 'Черепица', slope: 'Наклон'};
+const decoOne = t => t === 'barrel' || t === 'slope';   // формы без количества
 // точки наружной линии по высоте зоны [z1, z2]: [{z, d}] снизу вверх, d — вылет наружу, мм; up — борт печатается лицом вверх
 function decoLine(type, z1, z2, N, e, up, step){
   step = step || 0.1;
@@ -12145,6 +12153,9 @@ function decoLine(type, z1, z2, N, e, up, step){
     add(z1, 0);
     for (let k = 0; k < N; k++){ const s0 = z1 + k * L + (L - b) / 2; add(s0, 0); add(s0 + c, e); add(s0 + c + top, e); add(s0 + b, 0); }
     add(z2, 0);
+  } else if (type === 'slope'){
+    // наклон: ровная стенка расширяется к лицу, без изгибов
+    add(z1, 0); add(z2, e);
   } else if (type === 'shingle'){
     // черепица: низ каждого ряда выходит наружу под 45°, дальше ряд пологим скатом уходит к стене
     const L = Z / N, c = Math.min(e, L / 2);
@@ -12154,7 +12165,7 @@ function decoLine(type, z1, z2, N, e, up, step){
 }
 // фигурный борт — пустая оболочка одной толщины B: внутренняя сторона повторяет наружную,
 // поэтому слайсер печатает его одними стенками, без заполнения. Скаты не круче 45° — вылет ограничивается сам.
-// Где в борт заходит юбка или поддон и где паз/полка под лицо — борт остаётся ровным.
+// Где в борт заходит юбка или задник и где паз/полка под лицо — борт остаётся ровным.
 function decoZone(p, prof, zBot, zTop){
   const pts = prof.pts, n = pts.length, last = pts[n - 1];
   if (n < 4 || Math.abs(pts[0].r) > 1e-9 || Math.abs(pts[0].z) > 1e-9 || Math.abs(last.r) > 1e-9) return null;
@@ -12170,12 +12181,12 @@ function decoProfile(p, prof, zBot, zTop, flip, msgs){
   if (!t || t === 'none' || !DECO[t]) return null;
   const warn = m => msgs.push({t: 'warn', m}), err = m => msgs.push({t: 'err', m});
   if (prof.kind === 'custom') return null;
-  const e0 = p.decoE, N = t === 'barrel' ? 1 : Math.max(1, Math.round(p.decoN || 1));
+  const e0 = p.decoE, N = decoOne(t) ? 1 : Math.max(1, Math.round(p.decoN || 1));
   if (!(e0 >= 0.3)){ err('Фигурный борт: вылет наружу — не меньше 0,3 мм.'); return null; }
   if (e0 > 30){ err('Фигурный борт: вылет больше 30 мм — слишком много.'); return null; }
   const zn = decoZone(p, prof, zBot, zTop); if (!zn) return null;
   const {B, z1, z2} = zn, Z = z2 - z1, pts = prof.pts;
-  if (Z < 4){ warn(`Фигурный борт не поместился: ровными должны остаться ${fmt(zn.lo)} мм снизу (юбка/поддон) и паз сверху — по высоте осталось ${fmt(Math.max(0, zn.hi - zn.lo))} мм. Увеличьте высоту борта или уменьшите отступ у краёв.`); return null; }
+  if (Z < 4){ warn(`Фигурный борт не поместился: ровными должны остаться ${fmt(zn.lo)} мм снизу (юбка/задник) и паз сверху — по высоте осталось ${fmt(Math.max(0, zn.hi - zn.lo))} мм. Увеличьте высоту борта или уменьшите отступ у краёв.`); return null; }
   if (Z / N < 2){ warn(`Фигурный борт: ${N} шт. на ${fmt(Z)} мм — слишком часто, уменьшите количество.`); return null; }
   const step = p.__fine ? 0.15 : 0.25;
   const slope = line => { let s = 0; for (let i = 1; i < line.length; i++){ const dz = line[i].z - line[i - 1].z; if (dz > 1e-7) s = Math.max(s, Math.abs(line[i].d - line[i - 1].d) / dz); } return s; };
@@ -12186,22 +12197,24 @@ function decoProfile(p, prof, zBot, zTop, flip, msgs){
     for (let i = 0; i < 30; i++){ const m = (a + b) / 2; if (slope(decoLine(t, z1, z2, N, m, !flip, 0.05)) > 1.0001) b = m; else a = m; }
     e = Math.floor(a * 100) / 100; line = decoLine(t, z1, z2, N, e, !flip, step);
     if (e < 0.3){ warn(`${DECO[t]}: при ${N} шт. на ${fmt(Z)} мм скат круче 45° даже при малом вылете — уменьшите количество.`); return null; }
-    warn(`${DECO[t]}: вылет уменьшен с ${fmt(e0)} до ${fmt(e)} мм, чтобы скат был не круче 45° — печать без поддержек.${t === 'barrel' ? '' : ' Больше вылет — меньше количество.'}`);
+    warn(`${DECO[t]}: вылет уменьшен с ${fmt(e0)} до ${fmt(e)} мм, чтобы скат был не круче 45° — печать без поддержек.${t === 'slope' ? ' Больше вылет — выше борт.' : t === 'barrel' ? '' : ' Больше вылет — меньше количество.'}`);
   }
   // контур профиля: низ → внутренняя сторона (B − d) → остальной профиль (паз, полка) → наружная сторона (−d) вниз
   const out = [];
   const push = (r, z) => { const l = out[out.length - 1]; if (!l || Math.abs(l.r - r) > 1e-7 || Math.abs(l.z - z) > 1e-7) out.push({r, z}); };
   push(pts[0].r, pts[0].z); push(B, 0); push(B, z1);
   for (const q of line) push(B - q.d, q.z);
-  push(B, z2);
-  for (let i = 2; i < pts.length; i++) push(pts[i].r, pts[i].z);
-  push(0, z2);
+  // наклон: всё, что выше (паз, полка, лицо), сдвигается наружу вместе с бортом
+  const sh = t === 'slope' ? e : 0;
+  push(B - sh, z2);
+  for (let i = 2; i < pts.length; i++) push(pts[i].r - sh, pts[i].z);
+  push(-sh, z2);
   for (let i = line.length - 1; i >= 0; i--) push(-line[i].d, line[i].z);
   push(0, z1);
   if (Math.abs(out[out.length - 1].r) < 1e-7 && Math.abs(out[out.length - 1].z) < 1e-7) out.pop();
-  return {pts: out, out: Math.max(...line.map(q => q.d)), type: t, N, e, e0, z1, z2, B, line};
+  return {pts: out, out: Math.max(...line.map(q => q.d)), type: t, N, e, e0, z1, z2, B, line, sh};
 }
-// ===== защёлки: выступы на юбке поддона и глухие гнёзда на внутренней стороне борта =====
+// ===== защёлки: выступы на юбке задника и глухие гнёзда на внутренней стороне борта =====
 // профиль выступа по высоте: снизу скос 45° (держит и печатается без поддержек), площадка, сверху пологий заход
 function snapT(z, z0, h, f, rk){
   if (z <= z0 || z >= z0 + h + f + rk * h) return 0;
@@ -12250,15 +12263,15 @@ function snapWins(paths, p, w){
 function snapCfg(p, pts, msgs){
   if (!p.snapOn || p.backMode !== 'tray') return null;
   const warn = m => msgs.push({t: 'warn', m}), err = m => msgs.push({t: 'err', m});
-  if (!(p.lipH > 0 && p.lipW > 0)){ warn('Защёлки ставятся на юбку поддона — задайте высоту и толщину бортика.'); return null; }
+  if (!(p.lipH > 0 && p.lipW > 0)){ warn('Защёлки ставятся на юбку задника — задайте высоту и толщину бортика.'); return null; }
   if (!(p.snapH >= 0.1 && p.snapH <= 1.2)){ err('Защёлки: натяг — от 0,1 до 1,2 мм.'); return null; }
   if (!(p.snapLen >= 3 && p.snapLen <= 40)){ err('Защёлки: длина — от 3 до 40 мм.'); return null; }
   if (!(p.snapStep >= 2 * p.snapLen)){ err('Защёлки: шаг должен быть хотя бы вдвое больше длины защёлки.'); return null; }
   const skirt = p.trayStyle === 'skirt', gp = p.gapTray, hb = gp + p.snapH, c = 0.15, f = 0.6, rk = 1.8;
-  const hT = hb + f + rk * hb, zw0 = skirt ? p.tBack : 0;              // zw0: поддон → координаты борта
+  const hT = hb + f + rk * hb, zw0 = skirt ? p.tBack : 0;              // zw0: задник → координаты борта
   const lipBot = p.tBack - zw0, lipTop = p.tBack + p.lipH - zw0;
   const zb = lipTop - 0.6 - hT, riW = rMax(pts, 0.3) || p.B, q = hb + c - gp;
-  if (zb < lipBot + 1){ warn(`Защёлки не поместились: юбка поддона низкая — нужна высота бортика от ${fmt(hT + 1.6, 1)} мм.`); return null; }
+  if (zb < lipBot + 1){ warn(`Защёлки не поместились: юбка задника низкая — нужна высота бортика от ${fmt(hT + 1.6, 1)} мм.`); return null; }
   if (riW - q < 0.6){ warn(`Защёлки не сделаны: гнездо глубиной ${fmt(q)} мм прорезало бы борт ${fmt(riW)} мм — нужна стенка от ${fmt(q + 0.6)} мм или меньше натяг.`); return null; }
   // гнездо = выступ, раздутый на зазор c: по высоте ниже и выше, по глубине глубже
   return {gp, hb, c, f, rk, hT, zw0, zb, riW, riB: riW + gp, q, w: 1.2 + hb,
@@ -12798,16 +12811,18 @@ function* buildGen(p){
   if (fm === 'integral' && bm === 'integral') err('Лицо и задник заодно с бортом дают закрытую коробку — её не напечатать. Сделайте одну из панелей отдельной деталью.');
   if (fm !== 'none' && p.tFace < 0.4) err('Лицо тоньше 0,4 мм не напечатается.');
   if (bm !== 'none' && p.tBack < 0.4) err('Задник тоньше 0,4 мм не напечатается.');
-  const g = fm === 'separate' || fm === 'acrylic' ? grooveOf(p, prof) : null;
+  let g = fm === 'separate' || fm === 'acrylic' ? grooveOf(p, prof) : null;
   if ((fm === 'acrylic' || bm === 'pvc') && !(p.acrD >= 0.5 && p.acrD <= 12)) err('Диаметр фрезы — от 0,5 до 12 мм.');
   if (fm === 'separate' && prof.kind !== 'lap' && (!g || g.depth <= 0)) err('Для отдельного лица нужен паз: задайте C больше нуля или выберите «Заодно с бортом».');
   const zBot = bm === 'integral' ? p.tBack : 0, zTop = fm === 'integral' ? H - p.tFace : H;
   if (zTop - zBot < 1) err('Панели толще самого борта — уменьшите толщину лица или задника.');
   const deco = hasErr() ? null : decoProfile(p, prof, zBot, zTop, fm === 'integral', msgs);
   if (deco) pts = deco.pts;
+  const shTop = deco ? deco.sh : 0;                 // наклон: паз и лицо сдвинуты наружу
+  if (g && shTop) g = Object.assign({}, g, {rIn: g.rIn - shTop});
   const lipOn = p.lipH > 0 && p.lipW > 0;
-  if (bm === 'tray' && p.trayStyle !== 'skirt' && p.tBack + (lipOn ? p.lipH : 0) > (g ? g.seat : zTop) - 0.5) err('Поддон с бортиком выше места под лицо — уменьшите бортик.');
-  if (bm === 'tray' && lipOn && p.lipW < 0.4) err('Бортик поддона тоньше 0,4 мм не напечатается.');
+  if (bm === 'tray' && p.trayStyle !== 'skirt' && p.tBack + (lipOn ? p.lipH : 0) > (g ? g.seat : zTop) - 0.5) err('Задник с бортиком выше места под лицо — уменьшите бортик.');
+  if (bm === 'tray' && lipOn && p.lipW < 0.4) err('Бортик задника тоньше 0,4 мм не напечатается.');
   const skirt = bm === 'tray' && p.trayStyle === 'skirt';
   const riW = skirt ? (rMax(pts, 0.3) || p.B) : 0, foot = 0, riB = riW + p.gapTray, pkR1 = 0, pkTop = 0;
   if (foot > 0.001) warn(`Юбка шире борта: у основания остаётся наружная стенка ${fmt(pkR1)} мм, юбка частично выходит внутрь за борт.`);
@@ -12918,8 +12933,8 @@ function* buildGen(p){
     }
     const pieces = [body];
     if (fm === 'separate' && prof.kind === 'lap'){
-      const lw = p.lapW, zl = H - p.lapH + p.gapFace, lay = panel(A, offset(A, -(lw + p.patFrame), p.corner), H, H + p.tFace, p.matFace, 'face', patTarget === 'face');
-      const ring = toEx(clip(CT.ctDifference, off(0), off(lw)));
+      const lw = p.lapW, zl = H - p.lapH + p.gapFace, A2 = off(-shTop), lay = panel(A2, offset(A2, -(lw + p.patFrame), p.corner), H, H + p.tFace, p.matFace, 'face', patTarget === 'face');
+      const ring = toEx(clip(CT.ctDifference, off(-shTop), off(lw - shTop)));
       if (ring.length) lay.push({ex: ring, a: zl, b: H, role: 'face', mat: p.matFace});
       pieces.push({kind: 'face', flip: true, z0: zl, z1: H + p.tFace, layers: lay});
     } else if (fm === 'separate'){
@@ -12946,7 +12961,7 @@ function* buildGen(p){
         const f = lipOn ? Math.max(0, Math.min(p.fillet, p.lipH)) : 0;
         const layers = panel(reg, offset(reg, -(p.lipW + f + p.patFrame), p.corner), 0, p.tBack, p.matBack, 'back', patTarget === 'back');
         if (lipOn){
-          // бортик поддона; галтель — вогнутое скругление между бортиком и пластиной
+          // бортик задника; галтель — вогнутое скругление между бортиком и пластиной
           const tc = new Map(), offT = r => { if (r < 1e-6) return reg; const key = r.toFixed(4); if (!tc.has(key)) tc.set(key, offset(reg, -r, p.corner)); return tc.get(key); };
           const lp = [{r: 0, z: p.tBack}];
           if (f > 0.05){ for (let q = 0; q <= 8; q++){ const t = (270 - 90 * q / 8) * Math.PI / 180; lp.push({r: p.lipW + f + f * Math.cos(t), z: p.tBack + f + f * Math.sin(t)}); } }
@@ -12959,7 +12974,7 @@ function* buildGen(p){
         }
         if (sWins && sWins.length) layers.push(...snapBumps(sWins));
         pieces.push({kind: 'tray', flip: false, z0: 0, z1: p.tBack + (lipOn ? p.lipH : 0), layers});
-      } else warn(`Буква ${li + 1}: поддон слишком узкий и пропал.`);
+      } else warn(`Буква ${li + 1}: задник слишком узкий и пропал.`);
     }
     for (const pc of pieces){
       pc.layers = pc.layers.filter(l => l.ex.length || l.g || l.skin);
@@ -13278,10 +13293,11 @@ function drawDiagram(){
   const fm = P.faceMode, bm = P.backMode, tray = bm === 'tray';
   const deco = decoProfile(P, prof, bm === 'integral' ? P.tBack : 0, fm === 'integral' ? H - P.tFace : H, fm === 'integral', []);
   const dpts = deco ? deco.pts : prof.pts, minR = deco ? -deco.out : 0;
-  const g = fm === 'separate' || fm === 'acrylic' ? grooveOf(P, prof) : null;
+  let g = fm === 'separate' || fm === 'acrylic' ? grooveOf(P, prof) : null;
+  if (g && deco && deco.sh) g = Object.assign({}, g, {rIn: g.rIn - deco.sh});
   const faceT = fm === 'acrylic' ? P.acrT : P.tFace;
   const lipOn = tray && P.lipH > 0 && P.lipW > 0, skirtSt = tray && P.trayStyle === 'skirt';
-  const zoff = skirtSt || bm === 'pvc' ? P.tBack : 0;                       // в сборе борт стоит на плите поддона
+  const zoff = skirtSt || bm === 'pvc' ? P.tBack : 0;                       // в сборе борт стоит на плите задника
   const riW = prof.kind === 'custom' ? maxR : (rMax(prof.pts, 0.3) || P.B);
   const notch = false, pkR1 = 0, pkTop = 0;
   const lapK = prof.kind === 'lap';
@@ -13313,13 +13329,13 @@ function drawDiagram(){
   const rIn = X(Math.max(maxR, trayR)) + 22;           // колонка подписей справа от борта
   const calls = [];                   // подписи с выносками: {y: цель по вертикали, tx, ty: точка на детали, t, col}
   // --- лицо
-  if (fm === 'integral'){ const ro = rMin(prof.pts, H - P.tFace / 2) || 0; s += slab(ro, zoff + H - P.tFace, zoff + H, cf); s += T(xFar, Y(zoff + H) - 7, `Лицо D · ${fmt(P.tFace)} мм`, 'var(--dimD)', 'end'); }
+  if (fm === 'integral'){ const ro = rMin(dpts, H - P.tFace / 2) || 0; s += slab(ro, zoff + H - P.tFace, zoff + H, cf); s += T(xFar, Y(zoff + H) - 7, `Лицо D · ${fmt(P.tFace)} мм`, 'var(--dimD)', 'end'); }
   if (fm === 'separate' && g){
     s += slab(g.rIn + P.gapFace, zoff + g.seat, zoff + g.seat + P.tFace, cf, true);
     s += T(xFar, Y(zoff + g.seat + P.tFace) - 7, `Лицо D · ${fmt(P.tFace)} мм · зазор ${fmt(P.gapFace)}`, 'var(--dimD)', 'end');
   }
   if (lapK){
-    s += slab(0, zoff + H, zoff + H + P.tFace, cf) + rect(0, zoff + H - P.lapH + P.gapFace, P.lapW, zoff + H, cf);
+    { const sh = deco ? deco.sh : 0; s += slab(-sh, zoff + H, zoff + H + P.tFace, cf) + rect(-sh, zoff + H - P.lapH + P.gapFace, P.lapW - sh, zoff + H, cf); }
     s += T(xFar, Y(zoff + H + P.tFace) - 7, `Лицо D · ${fmt(P.tFace)} мм`, 'var(--dimD)', 'end');
     const yl = Y(zoff + H + P.tFace) + 26;
     s += lead(rIn - 4, yl - 4, X(P.lapW / 2), Y(zoff + H - P.lapH * 0.55), 'var(--dimD)') + T(rIn, yl, `Замок w · ${fmt(P.lapW)} мм`, 'var(--dimD)');
@@ -13369,7 +13385,7 @@ function drawDiagram(){
   if (deco){
     yb += 22;
     s += hd(yb, minR, 0, cS);
-    s += T(X(minR), yb + 20, `${DECO[deco.type]}${deco.type === 'barrel' ? '' : ' × ' + deco.N} · вылет ${fmt(deco.out)} мм`, cS);
+    s += T(X(minR), yb + 20, `${DECO[deco.type]}${decoOne(deco.type) ? '' : ' × ' + deco.N} · вылет ${fmt(deco.out)} мм`, cS);
     s += T(X(minR), yb + 36, `пустой, стенка ${fmt(deco.B)} мм везде · скат ≤ 45°`, cS, null, false);
     yb += 36;
   }
@@ -13379,7 +13395,7 @@ function drawDiagram(){
     if (false){
     } else {
       s += hd(yb, riW, riW + gp, cG) + hd(yb, riW + gp, riW + gp + w, cT);
-      s += `<text x="${X(0).toFixed(1)}" y="${yb + 20}" style="font-weight:600"><tspan style="fill:${cG}">зазор ${fmt(gp)}</tspan><tspan style="fill:${cT}"> · ${skirtSt ? 'юбка' : 'бортик поддона'} ${fmt(w)} мм</tspan></text>`;
+      s += `<text x="${X(0).toFixed(1)}" y="${yb + 20}" style="font-weight:600"><tspan style="fill:${cG}">зазор ${fmt(gp)}</tspan><tspan style="fill:${cT}"> · ${skirtSt ? 'юбка' : 'бортик задника'} ${fmt(w)} мм</tspan></text>`;
     }
     yb += 20;
   }
@@ -13405,7 +13421,7 @@ function drawDiagram(){
 // значок формы борта: разрез стенки, снаружи — слева
 function decoIcon(t){
   const W = 34, H = 44, xo = 19, wd = 5, kz = 40, e = t === 'barrel' ? 9 : 7;
-  const line = t === 'none' ? [{z: 0, d: 0}, {z: 1, d: 0}] : decoLine(t, 0, 1, t === 'barrel' ? 1 : 2, 1, true);
+  const line = t === 'none' ? [{z: 0, d: 0}, {z: 1, d: 0}] : decoLine(t, 0, 1, decoOne(t) ? 1 : 2, 1, true);
   const P2 = (q, dx) => `${(xo + dx - q.d * e).toFixed(1)},${(H - 2 - q.z * kz).toFixed(1)}`;
   const pts = line.map(q => P2(q, wd)).concat(line.slice().reverse().map(q => P2(q, 0)));
   return `<svg class="ic" viewBox="0 0 ${W} ${H}" aria-hidden="true"><line class="base" x1="${xo}" y1="1" x2="${xo}" y2="${H - 1}"/><polygon class="w" points="${pts.join(' ')}"/></svg>`;
@@ -13482,7 +13498,7 @@ const VIS = {
   lap: () => P.faceMode === 'separate' && P.faceJoin === 'lap' && P.wallType !== 'custom', groove: () => !(P.faceMode === 'separate' && P.faceJoin === 'lap' && P.wallType !== 'custom'), faceSepStd: () => P.faceMode === 'separate' && P.wallType !== 'custom',
   standard: () => P.wallType === 'standard' && !(P.faceMode === 'separate' && P.faceJoin === 'lap'), ledge: () => P.wallType === 'ledge' && !(P.faceMode === 'separate' && P.faceJoin === 'lap'), custom: () => P.wallType === 'custom',
   grooveOn: () => P.wallType !== 'custom' && P.faceMode !== 'integral' && P.faceMode !== 'acrylic', grooveOff: () => P.wallType !== 'custom' && P.faceMode === 'integral',
-  rel: () => P.relType !== 'none', deco: () => P.decoType !== 'none', decoN: () => P.decoType !== 'none' && P.decoType !== 'barrel', stripe: () => P.stripeOn, face: () => P.faceMode !== 'none' && P.faceMode !== 'acrylic', acr: () => P.faceMode === 'acrylic', notAcr: () => P.faceMode !== 'acrylic', pvc: () => P.backMode === 'pvc', cnc: () => P.faceMode === 'acrylic' || P.backMode === 'pvc', backPrint: () => P.backMode !== 'none' && P.backMode !== 'pvc', faceSep: () => P.faceMode === 'separate',
+  rel: () => P.relType !== 'none', deco: () => P.decoType !== 'none', decoN: () => P.decoType !== 'none' && !decoOne(P.decoType), stripe: () => P.stripeOn, face: () => P.faceMode !== 'none' && P.faceMode !== 'acrylic', acr: () => P.faceMode === 'acrylic', notAcr: () => P.faceMode !== 'acrylic', pvc: () => P.backMode === 'pvc', cnc: () => P.faceMode === 'acrylic' || P.backMode === 'pvc', backPrint: () => P.backMode !== 'none' && P.backMode !== 'pvc', faceSep: () => P.faceMode === 'separate',
   back: () => P.backMode !== 'none', tray: () => P.backMode === 'tray', snap: () => P.backMode === 'tray' && P.snapOn,
   pat: () => P.pattern !== 'solid', voronoi: () => P.pattern === 'voronoi', inlay: () => P.pattern !== 'solid' && P.patMode === 'inlay'
 };
@@ -13531,9 +13547,9 @@ function summaries(){
   { const parts_ = []; if (P.faceMode === 'acrylic') parts_.push(`акрил ${fmt(P.acrT)} мм`); if (P.backMode === 'pvc') parts_.push(`ПВХ ${fmt(P.tBack)} мм`);
     set('sAcr', parts_.length ? `${parts_.join(' + ')} · фреза ⌀${fmt(P.acrD, 3)}` : 'Выключено — всё печатается'); }
   set('sTop', `${faceTxt} · борт ${P.wallType === 'custom' && profile ? fmt(profile.H) + ' мм, свой профиль' : fmt(P.A) + ' × ' + fmt(P.B) + ' мм'}`);
-  set('sBack', {tray: `Поддон ${fmt(P.tBack)} мм, бортик ${fmt(P.lipH)} мм${P.snapOn ? ', защёлки' : ''}`, integral: `Заодно с бортом, ${fmt(P.tBack)} мм`, none: 'Без задника', pvc: `Лист ПВХ ${fmt(P.tBack)} мм — на ЧПУ`}[P.backMode]);
+  set('sBack', {tray: `Задник ${fmt(P.tBack)} мм, бортик ${fmt(P.lipH)} мм${P.snapOn ? ', защёлки' : ''}`, integral: `Заодно с бортом, ${fmt(P.tBack)} мм`, none: 'Без задника', pvc: `Лист ПВХ ${fmt(P.tBack)} мм — на ЧПУ`}[P.backMode]);
   set('sPat', P.pattern === 'solid' ? 'Без узора' : `${({hex: 'Соты', scales: 'Чешуя', petals: 'Лепестки', voronoi: 'Вороной'})[P.pattern]} ${fmt(P.patSize)} мм на ${P.patOn === 'face' ? 'лице' : 'заднике'}, ${P.patMode === 'inlay' ? 'вторым пластиком' : 'насквозь'}`);
-  { const a = P.decoType !== 'none' ? `${DECO[P.decoType]}${P.decoType === 'barrel' ? '' : ' × ' + Math.max(1, Math.round(P.decoN))}, вылет ${fmt(P.decoE)} мм` : '';
+  { const a = P.decoType !== 'none' ? `${DECO[P.decoType]}${decoOne(P.decoType) ? '' : ' × ' + Math.max(1, Math.round(P.decoN))}, вылет ${fmt(P.decoE)} мм` : '';
     const b = P.relType === 'none' ? '' : `рельеф: ${{studs: 'пупырышки', cones: 'шипы', pyramids: 'пирамидки', dimples: 'ямки'}[P.relType]}, ${fmt(P.relH)} мм, шаг ${fmt(P.relPitch)}`;
     set('sRel', a && b ? a + ' · ' + b : a || (b ? b[0].toUpperCase() + b.slice(1) : 'Ровный, без рельефа')); }
   set('sStripe', P.stripeOn ? `${fmt(P.stripeH)} мм, пластик ${P.matStripe}` : 'Выключена');
@@ -13553,8 +13569,9 @@ function refreshUI(){
   document.querySelectorAll('[data-deco]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.deco === P.decoType)));
   { const nt = $('snapNote'); if (nt) nt.textContent = `Выступ на юбке выходит за зазор на «натяг» и при надевании борта сверху заскакивает в гнездо на внутренней стороне борта. Гнездо глухое — снаружи борт целый. Снизу у выступа скос 45°, сверху пологий заход: борт надевается легко, а снимается с усилием. Натяг 0,3–0,5 мм для PLA и PETG. Защёлки ставятся на ровных участках, примерно через каждые ${fmt(P.snapStep, 0)} мм контура, минимум две на букву.${result && result.snaps ? ` Сейчас защёлок: ${result.snaps}.` : ''}`; }
   { const lb = $('decoNLbl'); if (lb) lb.textContent = {pillows: 'Сколько подушек', wave: 'Сколько волн', zigzag: 'Сколько зубцов', ribs: 'Сколько рёбер', shingle: 'Сколько рядов'}[P.decoType] || 'Сколько, шт';
-    const nt = $('decoNote'); if (nt) nt.textContent = P.decoType === 'none' ? '' : 'Борт — пустая оболочка одной толщины B: внутренняя сторона повторяет наружную, слайсер печатает его одними стенками, без заполнения. Скаты не круче 45° — если вылет слишком большой, он уменьшится сам. Снизу на высоту юбки поддона и сверху у паза борт остаётся ровным. Буква по борту станет шире на два вылета.'
-      + (P.decoType === 'zigzag' && Math.round(P.decoN) === 2 ? ' Два зубца — линия «М» сбоку.' : ''); }
+    const nt = $('decoNote'); if (nt) nt.textContent = P.decoType === 'none' ? '' : 'Борт — пустая оболочка одной толщины B: внутренняя сторона повторяет наружную, слайсер печатает его одними стенками, без заполнения. Скаты не круче 45° — если вылет слишком большой, он уменьшится сам. Снизу на высоту юбки задника и сверху у паза борт остаётся ровным. Буква по борту станет шире на два вылета.'
+      + (P.decoType === 'zigzag' && Math.round(P.decoN) === 2 ? ' Два зубца — линия «М» сбоку.' : '')
+      + (P.decoType === 'slope' ? ' Наклон: борт ровной стенкой расширяется от задника к лицу на величину вылета, лицо и паз становятся больше на столько же. Вылет не больше высоты наклонной части (угол ≤ 45°).' : ''); }
   $('seedLbl').textContent = 'Вариант узора · ' + P.patSeed;
   $('pvcOn').checked = P.backMode === 'pvc';
   drawAcrCorner(); drawSnap();
@@ -13705,7 +13722,7 @@ async function build(){
   applyResult(R);
 }
 // схема угла: как фреза оставляет скругление на акриле и такое же скругление в пазу борта
-// крупный разрез узла защёлки: борт буквы с глухим гнездом и юбка поддона с выступом
+// крупный разрез узла защёлки: борт буквы с глухим гнездом и юбка задника с выступом
 function drawSnap(){
   const box = $('snapView'); if (!box) return;
   if (!(P.snapOn && P.backMode === 'tray')){ box.innerHTML = ''; return; }
@@ -13732,7 +13749,7 @@ function drawSnap(){
   svg += `<path d="M${f1(X(0))} ${f1(yq - 5)}v10M${f1(X(sc.riW - sc.q))} ${f1(yq - 5)}v10" stroke="var(--dimB)"/>`;
   svg += `<text x="${f1(X(Math.max(0, r0)))}" y="${f1(Y(z1) - 9)}" style="fill:${cw};font-weight:700">борт буквы</text>`;
   svg += `<path d="M${f1(X(sc.riB + P.lipW / 2))} ${f1(Y(z1) - 2)}v-2" stroke="none"/>`;
-  svg += lead(X(sc.riB + P.lipW * 0.7), Y(lipTop - 0.4), 40, 'юбка поддона', cb);
+  svg += lead(X(sc.riB + P.lipW * 0.7), Y(lipTop - 0.4), 40, 'юбка задника', cb);
   svg += lead(X(sc.riB - sc.hb * 0.7), Y(zMid), 66, `натяг ${fmt(P.snapH)} мм`, 'var(--accent)');
   svg += lead(X(sc.riW - sc.q / 2), Y(sc.zb - 0.05), 92, `гнездо ${fmt(sc.q)} мм, глухое`, cw);
   svg += lead(X((sc.riW - sc.q) / 2), yq, 118, `снаружи стенка ${fmt(sc.riW - sc.q)} мм`, 'var(--dimB)');
