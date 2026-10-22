@@ -79,7 +79,7 @@ header p{margin:0;color:var(--muted);max-width:80ch}
 .f{display:flex;flex-direction:column;gap:6px;font-size:15px;min-width:0}
 .f>span{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:500;color:var(--lbl);letter-spacing:.01em}
 .f:has(>.in),.f:has(>.sp){gap:0;border:1px solid var(--well-line);border-radius:10px;overflow:hidden;background:var(--well)}
-.f:has(>.in)>span,.f:has(>.sp)>span{background:var(--lblbg);padding:6px 10px;border-bottom:1px solid #5d4b2c}
+.f:has(>.in)>span:not(.sp),.f:has(>.sp)>span:not(.sp){background:var(--lblbg);padding:6px 10px;border-bottom:1px solid #5d4b2c;flex:1;align-items:flex-start}
 .f:has(>.in)>.in,.f:has(>.sp)>.in,.f:has(>.sp)>.sp>.in,.f>.sp>.in{border:0;border-radius:0;box-shadow:none;background:var(--well)}
 .f:has(>.in:focus),.f:has(.sp>.in:focus){border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,90,79,.18)}
 .f:has(>.in)>.in:focus,.f:has(.sp>.in:focus) .in:focus{box-shadow:none}
@@ -90,6 +90,7 @@ header p{margin:0;color:var(--muted);max-width:80ch}
 .in:hover{border-color:var(--well-hover)}
 textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
 .sp{position:relative;display:block}
+.f>.sp{flex:none}
 .sp>.in{padding-right:34px}
 .sp .sb{position:absolute;right:3px;top:3px;bottom:3px;width:28px;display:flex;flex-direction:column;gap:2px}
 .sp .sb button{flex:1;border:0;border-radius:6px;background:#26384b;color:var(--fg);cursor:pointer;font:700 11px/1 var(--f-body);padding:0;user-select:none}
@@ -263,9 +264,9 @@ textarea.in{resize:vertical;min-height:62px;font-size:17px;font-weight:600}
             <label class="f" data-vis="face"><span><i class="lt D">D</i> Лицо</span><input class="in" id="tFace" data-k="tFace" inputmode="decimal"></label>
           </div>
           <div class="g3" data-vis="back">
-            <label class="f"><span>Толщина пластины, мм</span><input class="in" id="tBack2" data-k="tBack" inputmode="decimal"></label>
-            <label class="f" data-vis="tray"><span>Высота бортика, мм</span><input class="in" id="lipH2" data-k="lipH" inputmode="decimal"></label>
-            <label class="f" data-vis="tray"><span>Толщина бортика, мм</span><input class="in" id="lipW2" data-k="lipW" inputmode="decimal"></label>
+            <label class="f"><span>Толщина задника, мм</span><input class="in" id="tBack2" data-k="tBack" inputmode="decimal"></label>
+            <label class="f" data-vis="tray"><span>Высота бортика задника, мм</span><input class="in" id="lipH2" data-k="lipH" inputmode="decimal"></label>
+            <label class="f" data-vis="tray"><span>Толщина бортика задника, мм</span><input class="in" id="lipW2" data-k="lipW" inputmode="decimal"></label>
           </div>
           <div class="diagram" id="diagram"></div>
           <div class="mat"><span class="ml">Пластик борта</span><div class="chips" data-chips="matWall"></div></div>
